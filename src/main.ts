@@ -106,34 +106,8 @@ class App {
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
-    // Only detect planet intersections when not actively using camera controls and nothing is selected
-    if (!this.isUsingControls() && !this.selection.getSelectedPlanet()) {
-      this.raycaster.setFromCamera(this.mouse, this.camera);
-      const intersects = this.raycaster.intersectObjects(
-        [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
-      );
-      
-      if (intersects.length > 0) {
-        const intersectedMesh = intersects[0].object;
-        
-        // Check if it's the Sun
-        if (intersectedMesh === this.solarSystem.getSun()) {
-          this.updatePlanetInfo('Sun');
-          document.body.style.cursor = 'pointer';
-        } else {
-          // Check if it's a planet
-          const planet = this.solarSystem.getPlanetByMesh(intersectedMesh);
-          if (planet) {
-            this.updatePlanetInfo(planet.name);
-            document.body.style.cursor = 'pointer';
-          }
-        }
-      } else {
-        document.body.style.cursor = 'default';
-        this.updatePlanetInfo(null);
-      }
-    } else if (!this.isUsingControls()) {
-      // Show pointer cursor when hovering over planets even when something is selected
+    // Only show pointer cursor when hovering over planets
+    if (!this.isUsingControls()) {
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const intersects = this.raycaster.intersectObjects(
         [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
