@@ -10,7 +10,10 @@ export class SolarSystem {
   private planets: Planet[] = [];
   private orbits: THREE.Line[] = [];
   private showOrbits: boolean = true;
+  private orbitMode: 'static' | 'trails' = 'static';
   private showDistanceLabels: boolean = true;
+  private showCoordinateSystem: boolean = false;
+  private coordinateSystem: THREE.Group = new THREE.Group();
   private distanceLabels: THREE.Sprite[] = [];
   private distanceLines: THREE.Line[] = [];
   private timeScale: number = 1;
@@ -25,6 +28,7 @@ export class SolarSystem {
     this.createPlanets();
     this.createOrbits();
     this.createDistanceLabels();
+    this.createCoordinateSystem();
   }
 
   private createSun(): void {
@@ -113,42 +117,7 @@ export class SolarSystem {
   }
 
   private createOrbits(): void {
-    PLANETS.forEach((planetData) => {
-      const orbitRadius = getScaledOrbitRadius(planetData.orbitalRadius);
-      const segments = 200;
-      
-      const points = [];
-      for (let i = 0; i <= segments; i++) {
-        const angle = (i / segments) * Math.PI * 2;
-        const x = Math.cos(angle) * orbitRadius;
-        const z = Math.sin(angle) * orbitRadius;
-        points.push(new THREE.Vector3(x, 0, z));
-      }
-      
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      
-      // Initialize vertex colors array
-      const colors = new Float32Array(points.length * 3);
-      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      
-      const material = new THREE.LineBasicMaterial({
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.8,
-        linewidth: 2,
-      });
-      
-      const orbit = new THREE.Line(geometry, material);
-      orbit.rotation.x = THREE.MathUtils.degToRad(planetData.inclination);
-      orbit.visible = this.showOrbits;
-      orbit.userData = { 
-        orbitRadius: orbitRadius,
-        planetName: planetData.name 
-      };
-      
-      this.orbits.push(orbit);
-      this.scene.add(orbit);
-    });
+    this.createOrbitsForMode();
   }
 
   private createDistanceLabels(): void {
@@ -240,65 +209,58 @@ export class SolarSystem {
       planet.update(delta, this.currentTime);
     });
     
-    // Update orbit shading
-    if (this.camera && this.showOrbits) {
-      this.updateOrbitShading();
+    // Update orbit trails if in trail mode
+    if (this.showOrbits && this.orbitMode === 'trails') {
+      this.updateOrbitTrails();
     }
   }
   
-  private updateOrbitShading(): void {
-    if (!this.camera) return;
-    
-    this.orbits.forEach((orbit) => {
+  private updateOrbitTrails(): void {
+    this.orbits.forEach((orbit, index) => {
+      const userData = orbit.userData;
+      
+      // Only update orbits that are in trail mode
+      if (!userData || userData.mode !== 'trails') return;
+      
+      const planet = this.planets[index];
       const geometry = orbit.geometry as THREE.BufferGeometry;
-      const colorAttribute = geometry.getAttribute('color') as THREE.BufferAttribute;
       const positionAttribute = geometry.getAttribute('position') as THREE.BufferAttribute;
       
-      if (!colorAttribute || !positionAttribute) return;
+      if (!positionAttribute) return;
       
-      const colors = colorAttribute.array as Float32Array;
-      const positions = positionAttribute.array as Float32Array;
+      // Get current planet position in orbit's local space
+      const planetPos = planet.getPosition();
       
-      // Get orbit's world matrix for transforming local positions
-      orbit.updateMatrixWorld();
+      // Transform planet position to orbit's local coordinate system
+      const orbitInverse = new THREE.Matrix4().copy(orbit.matrixWorld).invert();
+      const localPlanetPos = planetPos.clone().applyMatrix4(orbitInverse);
       
-      for (let i = 0; i < positionAttribute.count; i++) {
-        // Get local position
-        const localPos = new THREE.Vector3(
-          positions[i * 3],
-          positions[i * 3 + 1],
-          positions[i * 3 + 2]
-        );
-        
-        // Transform to world space
-        const worldPos = localPos.clone().applyMatrix4(orbit.matrixWorld);
-        
-        // Calculate distance from camera to this point
-        const distance = this.camera.position.distanceTo(worldPos);
-        
-        // Calculate relative brightness based on distance
-        // Closer points are brighter, farther points are dimmer
-        const maxDistance = 800;
-        const minDistance = 50;
-        
-        let brightness;
-        if (distance < minDistance) {
-          brightness = 1.0; // Maximum brightness for very close points
-        } else if (distance > maxDistance) {
-          brightness = 0.2; // Minimum brightness for distant points
-        } else {
-          // Smooth gradient between min and max distance
-          const t = (distance - minDistance) / (maxDistance - minDistance);
-          brightness = 1.0 - (t * 0.8); // Range from 1.0 to 0.2
+      // Initialize trail points array if it doesn't exist
+      if (!userData.trailPoints || userData.trailPoints.length === 0) {
+        userData.trailPoints = [];
+        for (let i = 0; i < userData.trailLength; i++) {
+          userData.trailPoints.push(localPlanetPos.clone());
         }
-        
-        // Apply slight blue tint to make it look more space-like
-        colors[i * 3] = brightness * 0.7;     // Red
-        colors[i * 3 + 1] = brightness * 0.8; // Green  
-        colors[i * 3 + 2] = brightness;       // Blue
       }
       
-      colorAttribute.needsUpdate = true;
+      // Add current planet position to the beginning of the trail
+      userData.trailPoints.unshift(localPlanetPos.clone());
+      
+      // Keep only the specified trail length
+      if (userData.trailPoints.length > userData.trailLength) {
+        userData.trailPoints = userData.trailPoints.slice(0, userData.trailLength);
+      }
+      
+      // Update the geometry with the trail points
+      const positions = positionAttribute.array as Float32Array;
+      for (let i = 0; i < Math.min(userData.trailPoints.length, userData.trailLength); i++) {
+        const point = userData.trailPoints[i];
+        positions[i * 3] = point.x;
+        positions[i * 3 + 1] = point.y;
+        positions[i * 3 + 2] = point.z;
+      }
+      
+      positionAttribute.needsUpdate = true;
     });
   }
   
@@ -328,6 +290,124 @@ export class SolarSystem {
     });
   }
 
+  public setOrbitMode(mode: 'static' | 'trails'): void {
+    this.orbitMode = mode;
+    this.recreateOrbits();
+  }
+
+  private recreateOrbits(): void {
+    // Remove existing orbits
+    this.orbits.forEach(orbit => {
+      this.scene.remove(orbit);
+      if (orbit.geometry) orbit.geometry.dispose();
+      if (orbit.material && 'dispose' in orbit.material) {
+        (orbit.material as THREE.Material).dispose();
+      }
+    });
+    this.orbits = [];
+    
+    // Create new orbits with current mode
+    this.createOrbitsForMode();
+  }
+
+  private createOrbitsForMode(): void {
+    PLANETS.forEach((planetData) => {
+      const orbitRadius = getScaledOrbitRadius(planetData.orbitalRadius);
+      
+      if (this.orbitMode === 'static') {
+        this.createStaticOrbit(planetData, orbitRadius);
+      } else {
+        this.createTrailOrbit(planetData, orbitRadius);
+      }
+    });
+  }
+
+  private createStaticOrbit(planetData: any, orbitRadius: number): void {
+    const segments = 200;
+    
+    // Create points for the full orbit - flat in XZ plane for coordinate system look
+    const fullOrbitPoints = [];
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * orbitRadius;
+      const z = Math.sin(angle) * orbitRadius;
+      fullOrbitPoints.push(new THREE.Vector3(x, 0, z)); // Keep Y=0 for flat orbit
+    }
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(fullOrbitPoints);
+    
+    // Uniform color for static orbits
+    const colors = new Float32Array(fullOrbitPoints.length * 3);
+    for (let i = 0; i < fullOrbitPoints.length; i++) {
+      colors[i * 3] = 0.5;     // Red
+      colors[i * 3 + 1] = 0.6; // Green  
+      colors[i * 3 + 2] = 0.8; // Blue
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    const material = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.6,
+      linewidth: 1,
+    });
+    
+    const orbit = new THREE.Line(geometry, material);
+    // Don't apply inclination for static orbits to keep them flat like a coordinate system
+    orbit.visible = this.showOrbits;
+    orbit.userData = { 
+      orbitRadius: orbitRadius,
+      planetName: planetData.name,
+      mode: 'static'
+    };
+    
+    this.orbits.push(orbit);
+    this.scene.add(orbit);
+  }
+
+  private createTrailOrbit(planetData: any, orbitRadius: number): void {
+    const trailLength = 60;
+    
+    // Create initial trail points (will be updated dynamically)
+    const trailPoints = [];
+    for (let i = 0; i < trailLength; i++) {
+      trailPoints.push(new THREE.Vector3(0, 0, 0));
+    }
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+    
+    // Initialize vertex colors array for trail effect
+    const colors = new Float32Array(trailLength * 3);
+    for (let i = 0; i < trailLength; i++) {
+      const alpha = 1.0 - (i / trailLength); // Fade from 1 to 0 (newest to oldest)
+      colors[i * 3] = alpha * 0.7;     // Red
+      colors[i * 3 + 1] = alpha * 0.8; // Green  
+      colors[i * 3 + 2] = alpha;       // Blue
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    const material = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+      linewidth: 2,
+    });
+    
+    const orbit = new THREE.Line(geometry, material);
+    orbit.rotation.x = THREE.MathUtils.degToRad(planetData.inclination);
+    orbit.visible = this.showOrbits;
+    orbit.userData = { 
+      orbitRadius: orbitRadius,
+      planetName: planetData.name,
+      trailLength: trailLength,
+      trailPoints: [],
+      mode: 'trails'
+    };
+    
+    this.orbits.push(orbit);
+    this.scene.add(orbit);
+  }
+
   public setShowDistanceLabels(show: boolean): void {
     this.showDistanceLabels = show;
     this.distanceLabels.forEach(label => {
@@ -336,6 +416,209 @@ export class SolarSystem {
     this.distanceLines.forEach(line => {
       line.visible = show;
     });
+  }
+
+  public setShowCoordinateSystem(show: boolean): void {
+    this.showCoordinateSystem = show;
+    this.coordinateSystem.visible = show;
+  }
+
+  private createCoordinateSystem(): void {
+    this.coordinateSystem = new THREE.Group();
+    this.coordinateSystem.visible = this.showCoordinateSystem;
+    
+    // Create ecliptic plane grid (XZ plane - fundamental plane for solar system)
+    this.createEclipticPlane();
+    
+    // Create celestial equator (inclined 23.4° to ecliptic)
+    this.createCelestialEquator();
+    
+    // Create coordinate axes
+    this.createCoordinateAxes();
+    
+    this.scene.add(this.coordinateSystem);
+  }
+
+  private createEclipticPlane(): void {
+    // Create a grid representing the ecliptic plane (Earth's orbital plane)
+    const gridSize = 600; // Large enough to show outer planets
+    const divisions = 24; // 24 divisions for 15° increments
+    
+    // Create main grid lines
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    
+    // Longitude lines (radial from sun)
+    for (let i = 0; i <= divisions; i++) {
+      const angle = (i / divisions) * Math.PI * 2;
+      const x1 = Math.cos(angle) * 50; // Inner radius
+      const z1 = Math.sin(angle) * 50;
+      const x2 = Math.cos(angle) * gridSize;
+      const z2 = Math.sin(angle) * gridSize;
+      
+      positions.push(x1, 0, z1, x2, 0, z2);
+    }
+    
+    // Latitude circles (concentric circles)
+    const radiusSteps = [50, 100, 200, 300, 400, 500, 600];
+    radiusSteps.forEach(radius => {
+      const segments = 64;
+      for (let i = 0; i < segments; i++) {
+        const angle1 = (i / segments) * Math.PI * 2;
+        const angle2 = ((i + 1) / segments) * Math.PI * 2;
+        
+        positions.push(
+          Math.cos(angle1) * radius, 0, Math.sin(angle1) * radius,
+          Math.cos(angle2) * radius, 0, Math.sin(angle2) * radius
+        );
+      }
+    });
+    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    
+    const material = new THREE.LineBasicMaterial({
+      color: 0x444466,
+      transparent: true,
+      opacity: 0.3
+    });
+    
+    const eclipticGrid = new THREE.LineSegments(geometry, material);
+    this.coordinateSystem.add(eclipticGrid);
+    
+    // Add ecliptic plane label
+    this.addPlaneLabel('Ecliptic Plane\\n(Solar System)', new THREE.Vector3(400, 5, 0), 0x444466);
+  }
+
+  private createCelestialEquator(): void {
+    // Create celestial equator (inclined 23.4° to ecliptic)
+    const radius = 500;
+    const segments = 200;
+    const points = [];
+    
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      points.push(new THREE.Vector3(x, 0, z));
+    }
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+      color: 0x66aa44,
+      transparent: true,
+      opacity: 0.6,
+      linewidth: 2
+    });
+    
+    const celestialEquator = new THREE.Line(geometry, material);
+    // Apply 23.4° inclination to ecliptic
+    celestialEquator.rotation.x = THREE.MathUtils.degToRad(23.4);
+    
+    this.coordinateSystem.add(celestialEquator);
+    
+    // Add celestial equator label
+    this.addPlaneLabel('Celestial Equator\\n(Earth Equator)', new THREE.Vector3(350, 50, 0), 0x66aa44);
+  }
+
+  private createCoordinateAxes(): void {
+    // Create coordinate axes with labels
+    const axisLength = 400;
+    
+    // X-axis (Vernal Equinox direction)
+    const xGeometry = new THREE.BufferGeometry();
+    xGeometry.setAttribute('position', new THREE.Float32BufferAttribute([-axisLength, 0, 0, axisLength, 0, 0], 3));
+    const xMaterial = new THREE.LineBasicMaterial({ color: 0xff4444, linewidth: 3 });
+    const xAxis = new THREE.Line(xGeometry, xMaterial);
+    this.coordinateSystem.add(xAxis);
+    
+    // Z-axis (90° from vernal equinox)
+    const zGeometry = new THREE.BufferGeometry();
+    zGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, -axisLength, 0, 0, axisLength], 3));
+    const zMaterial = new THREE.LineBasicMaterial({ color: 0x4444ff, linewidth: 3 });
+    const zAxis = new THREE.Line(zGeometry, zMaterial);
+    this.coordinateSystem.add(zAxis);
+    
+    // Y-axis (North ecliptic pole)
+    const yGeometry = new THREE.BufferGeometry();
+    yGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, -200, 0, 0, 200, 0], 3));
+    const yMaterial = new THREE.LineBasicMaterial({ color: 0x44ff44, linewidth: 3 });
+    const yAxis = new THREE.Line(yGeometry, yMaterial);
+    this.coordinateSystem.add(yAxis);
+    
+    // Add axis labels
+    this.addAxisLabel('Vernal Equinox\\n(0° Ecliptic Longitude)', new THREE.Vector3(axisLength + 20, 0, 0), 0xff4444);
+    this.addAxisLabel('90° Ecliptic Longitude', new THREE.Vector3(0, 0, axisLength + 20), 0x4444ff);
+    this.addAxisLabel('North Ecliptic Pole', new THREE.Vector3(0, 200 + 20, 0), 0x44ff44);
+  }
+
+  private addPlaneLabel(text: string, position: THREE.Vector3, color: number): void {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    canvas.width = 256;
+    canvas.height = 64;
+    
+    context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+    context.font = 'bold 16px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    
+    // Handle multi-line text
+    const lines = text.split('\\n');
+    if (lines.length > 1) {
+      lines.forEach((line, index) => {
+        context.fillText(line, 128, 20 + index * 24);
+      });
+    } else {
+      context.fillText(text, 128, 32);
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+    });
+    
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(40, 10, 1);
+    sprite.position.copy(position);
+    
+    this.coordinateSystem.add(sprite);
+  }
+
+  private addAxisLabel(text: string, position: THREE.Vector3, color: number): void {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    canvas.width = 200;
+    canvas.height = 50;
+    
+    context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+    context.font = 'bold 14px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    
+    // Handle multi-line text
+    const lines = text.split('\\n');
+    if (lines.length > 1) {
+      lines.forEach((line, index) => {
+        context.fillText(line, 100, 15 + index * 20);
+      });
+    } else {
+      context.fillText(text, 100, 25);
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+    });
+    
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(30, 7.5, 1);
+    sprite.position.copy(position);
+    
+    this.coordinateSystem.add(sprite);
   }
 
   public setPlanetScale(scale: number): void {

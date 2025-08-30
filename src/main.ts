@@ -219,6 +219,10 @@ class App {
     this.solarSystem.setShowOrbits(show);
   }
 
+  public setOrbitMode(mode: 'static' | 'trails'): void {
+    this.solarSystem.setOrbitMode(mode);
+  }
+
   public setShowLabels(show: boolean): void {
     this.labels.setVisible(show);
   }
@@ -230,6 +234,10 @@ class App {
 
   public setShowDistanceLabels(show: boolean): void {
     this.solarSystem.setShowDistanceLabels(show);
+  }
+
+  public setShowCoordinateSystem(show: boolean): void {
+    this.solarSystem.setShowCoordinateSystem(show);
   }
 
   private isUsingControls(): boolean {
