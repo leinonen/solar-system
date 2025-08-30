@@ -10,8 +10,8 @@ import { Labels } from './ui/Labels';
 
 class App {
   private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
   private solarSystem: SolarSystem;
   private starField: StarField;
   private skybox: Skybox;
@@ -113,7 +113,7 @@ class App {
     }
   }
 
-  private onMouseClick(event: MouseEvent): void {
+  private onMouseClick(_event: MouseEvent): void {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersects = this.raycaster.intersectObjects(
       this.solarSystem.getPlanetMeshes()
