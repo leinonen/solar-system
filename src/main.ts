@@ -223,10 +223,6 @@ class App {
     this.labels.setVisible(show);
   }
 
-  public setPlanetScale(scale: number): void {
-    this.solarSystem.setPlanetScale(scale);
-  }
-
 
   public setShowMilkyWay(show: boolean): void {
     this.skybox.setStarFieldMode(!show);
