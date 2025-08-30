@@ -70,12 +70,15 @@ export class SolarSystem {
     canvas.height = 512;
     const context = canvas.getContext('2d')!;
     
-    // Create smooth radial gradient
+    // Create exponential radial gradient
     const gradient = context.createRadialGradient(256, 256, 0, 256, 256, 256);
     gradient.addColorStop(0, 'rgba(255, 255, 100, 1.0)');
-    gradient.addColorStop(0.4, 'rgba(255, 200, 50, 0.8)');
-    gradient.addColorStop(0.7, 'rgba(255, 150, 30, 0.4)');
-    gradient.addColorStop(0.9, 'rgba(255, 100, 20, 0.1)');
+    gradient.addColorStop(0.2, 'rgba(255, 220, 80, 0.9)');
+    gradient.addColorStop(0.3, 'rgba(255, 180, 60, 0.7)');
+    gradient.addColorStop(0.45, 'rgba(255, 140, 40, 0.4)');
+    gradient.addColorStop(0.6, 'rgba(255, 100, 30, 0.15)');
+    gradient.addColorStop(0.75, 'rgba(255, 80, 20, 0.05)');
+    gradient.addColorStop(0.9, 'rgba(255, 60, 15, 0.02)');
     gradient.addColorStop(1, 'rgba(255, 50, 10, 0.0)');
     
     context.fillStyle = gradient;
