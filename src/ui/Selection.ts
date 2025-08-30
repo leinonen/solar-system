@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { SolarSystem } from '../scene/SolarSystem';
-import { getScaledRadius } from '../data/PlanetData';
+import { getScaledRadius, getScaledMoonRadius } from '../data/PlanetData';
 
 export class Selection {
   private solarSystem: SolarSystem;
   private camera: THREE.PerspectiveCamera;
   private selectionBox?: THREE.LineSegments;
   private selectedPlanet?: string;
+  private selectedMoon?: string;
   private selectedObject?: THREE.Object3D;
-  private onSelectionChange?: (planetName: string | null) => void;
+  private onSelectionChange?: (selectionInfo: any) => void;
 
   constructor(solarSystem: SolarSystem, camera: THREE.PerspectiveCamera) {
     this.solarSystem = solarSystem;
@@ -18,6 +19,7 @@ export class Selection {
   public selectPlanet(planetName: string): void {
     this.clearSelection();
     this.selectedPlanet = planetName;
+    this.selectedMoon = undefined;
     
     if (planetName === 'Sun') {
       this.selectedObject = this.solarSystem.getSun();
@@ -29,7 +31,31 @@ export class Selection {
     this.createSelectionBox(planetName);
     
     if (this.onSelectionChange) {
-      this.onSelectionChange(planetName);
+      const selectionInfo = planetName === 'Sun' ? 
+        { type: 'sun', name: planetName } : 
+        { type: 'planet', name: planetName };
+      this.onSelectionChange(selectionInfo);
+    }
+  }
+
+  public selectMoon(moonName: string, planetName: string): void {
+    this.clearSelection();
+    this.selectedMoon = moonName;
+    this.selectedPlanet = planetName;
+    
+    // Find the moon mesh
+    const planet = this.solarSystem.getPlanets().find(p => p.name === planetName);
+    if (planet) {
+      const moonMesh = planet.getMoons().find(moon => 
+        moon.userData?.moon?.name === moonName
+      );
+      this.selectedObject = moonMesh;
+    }
+    
+    this.createMoonSelectionBox(moonName, planetName);
+    
+    if (this.onSelectionChange) {
+      this.onSelectionChange({ type: 'moon', name: moonName, planetName });
     }
   }
 
@@ -39,6 +65,7 @@ export class Selection {
       this.selectionBox = undefined;
     }
     this.selectedPlanet = undefined;
+    this.selectedMoon = undefined;
     this.selectedObject = undefined;
     
     if (this.onSelectionChange) {
@@ -92,7 +119,11 @@ export class Selection {
       
       const time = Date.now() * 0.003;
       const pulse = 0.8 + Math.sin(time) * 0.2;
-      this.selectionBox.material.opacity = pulse;
+      if (Array.isArray(this.selectionBox.material)) {
+        this.selectionBox.material[0].opacity = pulse;
+      } else {
+        this.selectionBox.material.opacity = pulse;
+      }
     }
   }
 
@@ -100,7 +131,38 @@ export class Selection {
     return this.selectedPlanet;
   }
 
-  public setOnSelectionChange(callback: (planetName: string | null) => void): void {
+  public setOnSelectionChange(callback: (selectionInfo: any) => void): void {
     this.onSelectionChange = callback;
+  }
+
+  private createMoonSelectionBox(moonName: string, planetName: string): void {
+    // Find the moon to get its radius
+    const planetData = this.solarSystem.getPlanetData(planetName);
+    const moonData = planetData?.moons?.find(m => m.name === moonName);
+    if (!moonData) return;
+
+    // Use scaled radius for moon but make selection box more visible
+    const radius = getScaledMoonRadius(moonData.radius);
+    
+    // Create a billboard rectangle that always faces the camera
+    // Make moon selection boxes larger relative to their size for better visibility
+    const size = Math.max(radius * 4, 1.5); // Minimum size of 1.5 units
+    const geometry = new THREE.PlaneGeometry(size, size);
+    const edges = new THREE.EdgesGeometry(geometry);
+    
+    const material = new THREE.LineBasicMaterial({
+      color: 0x00ff00,
+      linewidth: 3,
+      transparent: true,
+      opacity: 0.8,
+      depthTest: false,
+      depthWrite: false
+    });
+    
+    this.selectionBox = new THREE.LineSegments(edges, material);
+    this.selectionBox.renderOrder = 999; // Render last
+    
+    // Add to scene as independent object
+    this.solarSystem.getScene().add(this.selectionBox);
   }
 }

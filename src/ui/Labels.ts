@@ -3,6 +3,8 @@ import { SolarSystem } from '../scene/SolarSystem';
 
 interface LabelSprite extends THREE.Sprite {
   planetName?: string;
+  moonName?: string;
+  parentPlanet?: string;
 }
 
 export class Labels {
@@ -11,6 +13,7 @@ export class Labels {
   private labels: Map<string, LabelSprite> = new Map();
   private visible: boolean = true;
   private onPlanetClick?: (planetName: string) => void;
+  private onMoonClick?: (moonName: string, planetName: string) => void;
   private raycaster: THREE.Raycaster;
   private mouse: THREE.Vector2;
   private canvas: HTMLCanvasElement;
@@ -38,6 +41,23 @@ export class Labels {
       label.position.set(0, yOffset, 0);
       planet.getMesh().add(label);
       this.labels.set(planet.name, label);
+      
+      // Create moon labels
+      const planetData = this.solarSystem.getPlanetData(planet.name);
+      if (planetData?.moons) {
+        planet.getMoons().forEach((moonMesh, index) => {
+          const moonData = planetData.moons![index];
+          const moonLabel = this.createMoonLabelSprite(moonData.name, planet.name);
+          
+          // Position moon label slightly above the moon
+          const moonRadius = moonMesh.geometry.parameters.radius;
+          const yOffset = moonRadius * 2 + 0.5;
+          moonLabel.position.set(0, yOffset, 0);
+          
+          moonMesh.add(moonLabel);
+          this.labels.set(`${planet.name}-${moonData.name}`, moonLabel);
+        });
+      }
     });
   }
 
@@ -84,12 +104,56 @@ export class Labels {
     return sprite;
   }
 
+  private createMoonLabelSprite(moonName: string, planetName: string, color: string = '#cccccc'): LabelSprite {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    
+    const fontSize = 32; // Smaller font for moons
+    context.font = `${fontSize}px Arial`;
+    const metrics = context.measureText(moonName);
+    const textWidth = metrics.width;
+    
+    const padding = 16;
+    canvas.width = textWidth + padding * 2;
+    canvas.height = fontSize + padding;
+    
+    context.font = `${fontSize}px Arial`;
+    context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    context.roundRect(0, 0, canvas.width, canvas.height, 8);
+    context.fill();
+    
+    context.fillStyle = color;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(moonName, canvas.width / 2, canvas.height / 2);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: texture,
+      sizeAttenuation: true,
+      depthTest: true,
+      depthWrite: false,
+      transparent: true
+    });
+    
+    const sprite = new THREE.Sprite(spriteMaterial) as LabelSprite;
+    sprite.moonName = moonName;
+    sprite.parentPlanet = planetName;
+    
+    const aspect = canvas.width / canvas.height;
+    sprite.scale.set(aspect * 6, 6, 1); // Smaller than planet labels
+    
+    return sprite;
+  }
+
   private setupEventListeners(): void {
     this.canvas.addEventListener('click', this.onCanvasClick.bind(this));
   }
 
   private onCanvasClick(event: MouseEvent): void {
-    if (!this.visible || !this.onPlanetClick) return;
+    if (!this.visible) return;
     
     const rect = this.canvas.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -102,7 +166,11 @@ export class Labels {
     
     if (intersects.length > 0) {
       const clickedSprite = intersects[0].object as LabelSprite;
-      if (clickedSprite.planetName) {
+      if (clickedSprite.moonName && clickedSprite.parentPlanet && this.onMoonClick) {
+        // Handle moon label clicks - select the moon
+        this.onMoonClick(clickedSprite.moonName, clickedSprite.parentPlanet);
+      } else if (clickedSprite.planetName && this.onPlanetClick) {
+        // Handle planet/sun label clicks
         this.onPlanetClick(clickedSprite.planetName);
       }
     }
@@ -130,7 +198,14 @@ export class Labels {
         // Inverse scaling - labels get smaller as you get closer
         scaleFactor = Math.max(0.02, Math.min(1.0, distance / 20));
         
-        const baseScale = name === 'Sun' ? 4 : 2.5;
+        // Different base scales for different object types
+        let baseScale = 2.5;
+        if (name === 'Sun') {
+          baseScale = 4;
+        } else if (sprite.moonName) {
+          baseScale = 1.5; // Smaller scale for moon labels
+        }
+        
         const aspect = sprite.scale.x / sprite.scale.y;
         sprite.scale.set(aspect * baseScale * scaleFactor, baseScale * scaleFactor, 1);
         
@@ -159,5 +234,9 @@ export class Labels {
 
   public setOnPlanetClick(callback: (planetName: string) => void): void {
     this.onPlanetClick = callback;
+  }
+
+  public setOnMoonClick(callback: (moonName: string, planetName: string) => void): void {
+    this.onMoonClick = callback;
   }
 }

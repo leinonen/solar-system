@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PlanetData } from '../types/planet';
-import { getScaledRadius, getScaledOrbitRadius, EARTH_RADIUS } from '../data/PlanetData';
+import { getScaledRadius, getScaledOrbitRadius, getScaledMoonRadius, getScaledMoonOrbitRadius, EARTH_RADIUS } from '../data/PlanetData';
 
 export class Planet {
   private scene: THREE.Scene;
@@ -86,7 +86,7 @@ export class Planet {
     if (!this.data.moons) return;
     
     this.data.moons.forEach((moonData) => {
-      const moonRadius = getScaledRadius(moonData.radius) * this.currentScale;
+      const moonRadius = getScaledMoonRadius(moonData.radius) * this.currentScale;
       const geometry = new THREE.SphereGeometry(moonRadius, 16, 16);
       
       const textureLoader = new THREE.TextureLoader();
@@ -118,9 +118,10 @@ export class Planet {
       const moon = new THREE.Mesh(geometry, material);
       moon.castShadow = true;
       moon.receiveShadow = true;
+      moon.userData = { moon: moonData, planet: this };
       
       // Position moon relative to planet
-      const moonOrbitRadius = moonData.orbitalRadius * 1000 * this.currentScale;
+      const moonOrbitRadius = getScaledMoonOrbitRadius(moonData.orbitalRadius, this.name) * this.currentScale;
       moon.position.x = moonOrbitRadius;
       
       this.moons.push(moon);
@@ -167,7 +168,7 @@ export class Planet {
         const moonData = this.data.moons[index];
         const moonOrbitSpeed = (2 * Math.PI) / (Math.abs(moonData.orbitalPeriod) * 24 * 3600);
         const moonAngle = time * moonOrbitSpeed * 1000;
-        const moonOrbitRadius = moonData.orbitalRadius * 1000 * this.currentScale;
+        const moonOrbitRadius = getScaledMoonOrbitRadius(moonData.orbitalRadius, this.name) * this.currentScale;
         
         moon.position.x = Math.cos(moonAngle) * moonOrbitRadius;
         moon.position.z = Math.sin(moonAngle) * moonOrbitRadius;
@@ -219,8 +220,7 @@ export class Planet {
     this.moons.forEach((moon, index) => {
       moon.scale.setScalar(scale / this.baseScale);
       if (this.data.moons) {
-        const moonOrbitRadius = this.data.moons[index].orbitalRadius * 1000 * scale;
-        // Moon position will be updated in the update loop
+        // Moon orbit radius will be updated in the update loop
       }
     });
     
@@ -242,6 +242,10 @@ export class Planet {
 
   public getMesh(): THREE.Mesh {
     return this.mesh;
+  }
+
+  public getMoons(): THREE.Mesh[] {
+    return this.moons;
   }
 
   public getPosition(): THREE.Vector3 {

@@ -50,8 +50,12 @@ class App {
       this.selection.selectPlanet(planetName);
     });
     
-    this.selection.setOnSelectionChange((planetName: string | null) => {
-      this.updatePlanetInfo(planetName);
+    this.labels.setOnMoonClick((moonName: string, planetName: string) => {
+      this.selection.selectMoon(moonName, planetName);
+    });
+    
+    this.selection.setOnSelectionChange((selectionInfo: any) => {
+      this.updateSelectionInfo(selectionInfo);
     });
     
     this.setupEventListeners();
@@ -110,7 +114,7 @@ class App {
     if (!this.isUsingControls()) {
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const intersects = this.raycaster.intersectObjects(
-        [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
+        [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun(), ...this.solarSystem.getAllMoonMeshes()]
       );
       document.body.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
     }
@@ -122,7 +126,7 @@ class App {
     
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersects = this.raycaster.intersectObjects(
-      [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
+      [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun(), ...this.solarSystem.getAllMoonMeshes()]
     );
     
     if (intersects.length > 0) {
@@ -131,9 +135,16 @@ class App {
       if (intersectedMesh === this.solarSystem.getSun()) {
         this.selection.selectPlanet('Sun');
       } else {
+        // Check if it's a planet first
         const planet = this.solarSystem.getPlanetByMesh(intersectedMesh);
         if (planet) {
           this.selection.selectPlanet(planet.name);
+        } else {
+          // Check if it's a moon
+          const moonInfo = this.solarSystem.getMoonByMesh(intersectedMesh);
+          if (moonInfo) {
+            this.selection.selectMoon(moonInfo.moon.name, moonInfo.planet.name);
+          }
         }
       }
     } else {
@@ -167,11 +178,16 @@ class App {
     }
   }
 
-  private updatePlanetInfo(planetName: string | null): void {
+  private updateSelectionInfo(selectionInfo: any): void {
     const infoElement = document.getElementById('planet-info');
     if (!infoElement) return;
     
-    if (planetName === 'Sun') {
+    if (!selectionInfo) {
+      infoElement.textContent = 'Click on a planet, moon, or the Sun for information';
+      return;
+    }
+
+    if (selectionInfo.type === 'sun') {
       const sunData = this.solarSystem.getSunData();
       infoElement.innerHTML = `
         <strong>${sunData.name}</strong> <span style="color: #00ff00;">●</span><br>
@@ -181,9 +197,10 @@ class App {
         Core Temperature: ${sunData.temperature.core.toLocaleString()}°C<br>
         Type: G-type main-sequence star
       `;
-    } else if (planetName) {
-      const planet = this.solarSystem.getPlanetData(planetName);
+    } else if (selectionInfo.type === 'planet') {
+      const planet = this.solarSystem.getPlanetData(selectionInfo.name);
       if (planet) {
+        const moonCount = planet.moons ? planet.moons.length : 0;
         infoElement.innerHTML = `
           <strong>${planet.name}</strong> <span style="color: #00ff00;">●</span><br>
           Radius: ${planet.radius.toLocaleString()} km<br>
@@ -191,11 +208,22 @@ class App {
           Orbital Period: ${planet.orbitalPeriod.toFixed(1)} days<br>
           Distance from Sun: ${planet.orbitalRadius} AU<br>
           ${planet.temperature ? 
-            `Temperature: ${planet.temperature.min}°C to ${planet.temperature.max}°C` : ''}
+            `Temperature: ${planet.temperature.min}°C to ${planet.temperature.max}°C<br>` : ''}
+          ${moonCount > 0 ? `Moons: ${moonCount}` : 'No moons'}
         `;
       }
-    } else {
-      infoElement.textContent = 'Click on a planet or the Sun for information';
+    } else if (selectionInfo.type === 'moon') {
+      const planetData = this.solarSystem.getPlanetData(selectionInfo.planetName);
+      const moonData = planetData?.moons?.find(m => m.name === selectionInfo.name);
+      if (moonData && planetData) {
+        infoElement.innerHTML = `
+          <strong>${moonData.name}</strong> <span style="color: #00ff00;">●</span><br>
+          <em>Moon of ${planetData.name}</em><br>
+          Radius: ${moonData.radius.toLocaleString()} km<br>
+          Orbital Period: ${Math.abs(moonData.orbitalPeriod).toFixed(2)} days${moonData.orbitalPeriod < 0 ? ' (retrograde)' : ''}<br>
+          Distance from ${planetData.name}: ${(moonData.orbitalRadius * 149597870.7).toLocaleString()} km
+        `;
+      }
     }
   }
 

@@ -209,3 +209,36 @@ export function getScaledRadius(radius: number, isSun: boolean = false): number 
 export function getScaledOrbitRadius(auDistance: number): number {
   return auDistance * 30; // 30 units per AU for good spacing
 }
+
+export function getScaledMoonRadius(radius: number): number {
+  // Scale moons to be more visible: minimum 0.1, with better scaling
+  // Use Earth's Moon (1737.4 km) as reference = 0.3 units
+  const moonReference = 1737.4;
+  return Math.max(0.1, (radius / moonReference) * 0.3);
+}
+
+export function getScaledMoonOrbitRadius(radiusAU: number, planetName: string): number {
+  // Scale moon orbits to be more visible with planet-specific scaling
+  const radiusKm = radiusAU * AU;
+  
+  if (planetName === 'Earth') {
+    // Earth's Moon: 384,400 km -> ~4 units
+    return radiusKm / 100000;
+  } else if (planetName === 'Mars') {
+    // Mars moons are very close, need different scaling
+    // Phobos: 9,376 km -> ~2.5 units, Deimos: 23,463 km -> ~4 units
+    return Math.max(1.5, radiusKm / 5000);
+  } else if (planetName === 'Jupiter') {
+    // Jupiter moons need moderate scaling
+    return radiusKm / 200000;
+  } else if (planetName === 'Saturn') {
+    // Saturn moons need moderate scaling
+    return radiusKm / 150000;
+  } else if (planetName === 'Neptune') {
+    // Triton needs scaling similar to Earth's moon
+    return radiusKm / 120000;
+  } else {
+    // Default scaling
+    return radiusKm / 100000;
+  }
+}

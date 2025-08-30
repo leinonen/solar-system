@@ -192,7 +192,8 @@ export class SolarSystem {
       arrow.rotation.z = -Math.PI / 2; // Point right
       arrow.visible = this.showDistanceLabels;
       
-      this.distanceLines.push(arrow);
+      // Store as any to avoid type conflict with Line array
+      (this.distanceLines as any[]).push(arrow);
       this.scene.add(arrow);
     }
   }
@@ -649,6 +650,24 @@ export class SolarSystem {
 
   public getPlanetMeshes(): THREE.Object3D[] {
     return this.planets.map(p => p.getMesh());
+  }
+
+  public getAllMoonMeshes(): THREE.Object3D[] {
+    const allMoons: THREE.Object3D[] = [];
+    this.planets.forEach(planet => {
+      allMoons.push(...planet.getMoons());
+    });
+    return allMoons;
+  }
+
+  public getMoonByMesh(mesh: THREE.Object3D): { moon: any, planet: Planet } | undefined {
+    for (const planet of this.planets) {
+      const moon = planet.getMoons().find(m => m === mesh);
+      if (moon && moon.userData?.moon) {
+        return { moon: moon.userData.moon, planet };
+      }
+    }
+    return undefined;
   }
 
   public getPlanetByMesh(mesh: THREE.Object3D): Planet | undefined {
