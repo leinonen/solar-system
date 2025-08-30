@@ -35,13 +35,13 @@ export class SolarSystem {
     this.scene.add(this.sun);
     
     // Add sun light
-    this.sunLight = new THREE.PointLight(0xffffff, 3, 2000);
+    this.sunLight = new THREE.PointLight(0xffffff, 500, 0);
     this.sunLight.position.set(0, 0, 0);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 2048;
     this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.camera.near = 0.1;
-    this.sunLight.shadow.camera.far = 2000;
+    this.sunLight.shadow.camera.far = 1000;
     this.scene.add(this.sunLight);
     
     // Add sun glow effect

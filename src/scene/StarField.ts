@@ -68,7 +68,7 @@ export class StarField {
       opacity: 0.8,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      depthTest: false, // Always render behind everything else
+      depthTest: true,
     });
 
     this.stars = new THREE.Points(geometry, material);
@@ -113,7 +113,7 @@ export class StarField {
       opacity: 1,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      depthTest: false, // Always render behind everything else
+      depthTest: true,
     });
 
     const brightStars = new THREE.Points(geometry, material);

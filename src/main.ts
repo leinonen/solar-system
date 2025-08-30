@@ -60,8 +60,7 @@ class App {
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.5;
+    this.renderer.toneMapping = THREE.NoToneMapping;
   }
 
   private setupCamera(): void {
@@ -76,7 +75,7 @@ class App {
   }
 
   private setupLights(): void {
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.1);
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
     this.scene.add(ambientLight);
   }
 
