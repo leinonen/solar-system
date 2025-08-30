@@ -107,6 +107,7 @@ export class Planet {
       } catch (error) {
         material = new THREE.MeshLambertMaterial({
           color: 0xcccccc,
+          emissive: 0x111111,
         });
       }
       

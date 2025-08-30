@@ -55,7 +55,7 @@ export class SolarSystem {
     this.scene.add(this.sun);
     
     // Add sun light
-    this.sunLight = new THREE.PointLight(0xffffff, 500, 0);
+    this.sunLight = new THREE.PointLight(0xffffff, 5, 0, 0);
     this.sunLight.position.set(0, 0, 0);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 2048;
