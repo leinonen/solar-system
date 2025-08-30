@@ -44,16 +44,37 @@ export class SolarSystem {
     this.sunLight.shadow.camera.far = 1000;
     this.scene.add(this.sunLight);
     
-    // Add sun glow effect
-    const glowGeometry = new THREE.SphereGeometry(sunRadius * 1.5, 32, 32);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffff00,
+    // Create radial gradient texture
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d')!;
+    
+    // Create smooth radial gradient
+    const gradient = context.createRadialGradient(256, 256, 0, 256, 256, 256);
+    gradient.addColorStop(0, 'rgba(255, 255, 100, 1.0)');
+    gradient.addColorStop(0.4, 'rgba(255, 200, 50, 0.8)');
+    gradient.addColorStop(0.7, 'rgba(255, 150, 30, 0.4)');
+    gradient.addColorStop(0.9, 'rgba(255, 100, 20, 0.1)');
+    gradient.addColorStop(1, 'rgba(255, 50, 10, 0.0)');
+    
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 512, 512);
+    
+    const gradientTexture = new THREE.CanvasTexture(canvas);
+    
+    // Create billboard sprite for glow that always faces camera
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: gradientTexture,
       transparent: true,
-      opacity: 0.3,
-      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
     });
-    const sunGlow = new THREE.Mesh(glowGeometry, glowMaterial);
-    this.sun.add(sunGlow);
+    
+    const sunGlow = new THREE.Sprite(spriteMaterial);
+    sunGlow.scale.set(sunRadius * 6, sunRadius * 6, 1);
+    sunGlow.position.set(0, 0, 0);
+    this.scene.add(sunGlow);
   }
 
   private createPlanets(): void {
