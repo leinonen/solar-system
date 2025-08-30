@@ -11,7 +11,7 @@ export class SolarSystem {
   private orbits: THREE.Line[] = [];
   private showOrbits: boolean = true;
   private orbitMode: 'static' | 'trails' = 'static';
-  private showDistanceLabels: boolean = true;
+  private showDistanceLabels: boolean = false;
   private showCoordinateSystem: boolean = false;
   private coordinateSystem: THREE.Group = new THREE.Group();
   private distanceLabels: THREE.Sprite[] = [];
