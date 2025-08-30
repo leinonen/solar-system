@@ -82,7 +82,7 @@ export class Planet {
     if (!this.data.moons) return;
     
     this.data.moons.forEach((moonData) => {
-      const moonRadius = getScaledRadius(moonData.radius) * this.currentScale * 2;
+      const moonRadius = getScaledRadius(moonData.radius) * this.currentScale;
       const geometry = new THREE.SphereGeometry(moonRadius, 16, 16);
       
       const textureLoader = new THREE.TextureLoader();
@@ -212,7 +212,7 @@ export class Planet {
     
     // Update moons
     this.moons.forEach((moon, index) => {
-      moon.scale.setScalar(scale / this.baseScale * 2);
+      moon.scale.setScalar(scale / this.baseScale);
       if (this.data.moons) {
         const moonOrbitRadius = this.data.moons[index].orbitalRadius * 1000 * scale;
         // Moon position will be updated in the update loop

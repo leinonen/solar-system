@@ -182,9 +182,6 @@ class App {
     this.solarSystem.setPlanetScale(scale);
   }
 
-  public setRealisticScale(realistic: boolean): void {
-    this.solarSystem.setRealisticScale(realistic);
-  }
 
   public setShowStarField(show: boolean): void {
     this.skybox.setStarFieldMode(show);

@@ -2,7 +2,6 @@ interface AppInterface {
   setShowOrbits(show: boolean): void;
   setShowLabels(show: boolean): void;
   setPlanetScale(scale: number): void;
-  setRealisticScale(realistic: boolean): void;
   setShowStarField(show: boolean): void;
 }
 
@@ -16,7 +15,6 @@ export class Settings {
   private showOrbitsCheckbox: HTMLInputElement | null;
   private showLabelsCheckbox: HTMLInputElement | null;
   private planetScaleSlider: HTMLInputElement | null;
-  private realisticScaleCheckbox: HTMLInputElement | null;
   private showStarFieldCheckbox: HTMLInputElement | null;
   private isOpen: boolean = false;
 
@@ -32,7 +30,6 @@ export class Settings {
     this.showOrbitsCheckbox = document.getElementById('show-orbits') as HTMLInputElement;
     this.showLabelsCheckbox = document.getElementById('show-labels') as HTMLInputElement;
     this.planetScaleSlider = document.getElementById('planet-scale') as HTMLInputElement;
-    this.realisticScaleCheckbox = document.getElementById('realistic-scale') as HTMLInputElement;
     this.showStarFieldCheckbox = document.getElementById('show-starfield') as HTMLInputElement;
 
     if (this.settingsToggle && this.settingsContent) {
@@ -61,17 +58,6 @@ export class Settings {
       });
     }
 
-    if (this.realisticScaleCheckbox) {
-      this.realisticScaleCheckbox.addEventListener('change', (e) => {
-        const target = e.target as HTMLInputElement;
-        this.app.setRealisticScale(target.checked);
-        
-        // Disable scale slider when realistic scale is on
-        if (this.planetScaleSlider) {
-          this.planetScaleSlider.disabled = target.checked;
-        }
-      });
-    }
 
     if (this.showStarFieldCheckbox) {
       this.showStarFieldCheckbox.addEventListener('change', (e) => {
