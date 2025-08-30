@@ -28,13 +28,13 @@ export class Labels {
 
   private createLabels(): void {
     const sunLabel = this.createLabelSprite('Sun', '#ffff00');
-    sunLabel.position.set(0, 15, 0);
+    sunLabel.position.set(0, 8, 0);
     this.solarSystem.getSun().add(sunLabel);
     this.labels.set('Sun', sunLabel);
     
     this.solarSystem.getPlanets().forEach(planet => {
       const label = this.createLabelSprite(planet.name);
-      const yOffset = Math.max(planet.radius * 2 + 5, 8);
+      const yOffset = Math.max(planet.radius * 1.5 + 2, 4);
       label.position.set(0, yOffset, 0);
       planet.getMesh().add(label);
       this.labels.set(planet.name, label);
