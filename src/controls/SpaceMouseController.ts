@@ -74,6 +74,7 @@ export class SpaceMouseController {
           { vendorId: 0x046d, productId: 0xc626 },
           { vendorId: 0x046d, productId: 0xc628 },
           { vendorId: 0x046d, productId: 0xc62b },
+          { vendorId: 0x256f }, // 3Dconnexion vendor ID
         ]
       });
 
