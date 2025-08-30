@@ -254,6 +254,23 @@ export class Planet {
     this.orbitAngle = this.initialOrbitAngle;
   }
 
+  public setEnableShadows(enable: boolean): void {
+    // Update planet mesh
+    this.mesh.castShadow = enable;
+    this.mesh.receiveShadow = enable;
+    
+    // Update moons
+    this.moons.forEach(moon => {
+      moon.castShadow = enable;
+      moon.receiveShadow = enable;
+    });
+    
+    // Update rings if they exist
+    if (this.rings) {
+      this.rings.receiveShadow = enable;
+    }
+  }
+
   private calculateOrbitAngleForDate(julianDay: number): number {
     // Calculate mean longitude at epoch for this planet
     // Using simplified orbital elements - in reality you'd use proper ephemeris data

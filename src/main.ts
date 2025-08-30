@@ -240,6 +240,11 @@ class App {
     this.solarSystem.setShowCoordinateSystem(show);
   }
 
+  public setEnableShadows(enable: boolean): void {
+    this.renderer.shadowMap.enabled = enable;
+    this.solarSystem.setEnableShadows(enable);
+  }
+
   private isUsingControls(): boolean {
     return this.controls.isMouseDown() || this.spaceMouseController.isActive();
   }

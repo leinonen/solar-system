@@ -5,6 +5,7 @@ interface AppInterface {
   setShowMilkyWay(show: boolean): void;
   setShowDistanceLabels(show: boolean): void;
   setShowCoordinateSystem(show: boolean): void;
+  setEnableShadows(enable: boolean): void;
 }
 
 import { SolarSystem } from '../scene/SolarSystem';
@@ -20,6 +21,7 @@ export class Settings {
   private showMilkyWayCheckbox: HTMLInputElement | null;
   private showDistanceLabelsCheckbox: HTMLInputElement | null;
   private showCoordinateSystemCheckbox: HTMLInputElement | null;
+  private enableShadowsCheckbox: HTMLInputElement | null;
   private isOpen: boolean = false;
 
   constructor(solarSystem: SolarSystem, app: AppInterface) {
@@ -37,6 +39,7 @@ export class Settings {
     this.showMilkyWayCheckbox = document.getElementById('show-milkyway') as HTMLInputElement;
     this.showDistanceLabelsCheckbox = document.getElementById('show-distance-labels') as HTMLInputElement;
     this.showCoordinateSystemCheckbox = document.getElementById('show-coordinate-system') as HTMLInputElement;
+    this.enableShadowsCheckbox = document.getElementById('enable-shadows') as HTMLInputElement;
 
     if (this.settingsToggle && this.settingsContent) {
       this.settingsToggle.addEventListener('click', this.toggleSettings.bind(this));
@@ -82,6 +85,13 @@ export class Settings {
       this.showCoordinateSystemCheckbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
         this.app.setShowCoordinateSystem(target.checked);
+      });
+    }
+
+    if (this.enableShadowsCheckbox) {
+      this.enableShadowsCheckbox.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.app.setEnableShadows(target.checked);
       });
     }
   }

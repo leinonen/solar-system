@@ -423,6 +423,19 @@ export class SolarSystem {
     this.coordinateSystem.visible = show;
   }
 
+  public setEnableShadows(enable: boolean): void {
+    // Update sun light shadow casting
+    this.sunLight.castShadow = enable;
+    
+    // Update all planets to cast/receive shadows
+    this.planets.forEach(planet => {
+      planet.setEnableShadows(enable);
+    });
+    
+    // Update sun shadow receiving
+    this.sun.receiveShadow = enable;
+  }
+
   private createCoordinateSystem(): void {
     this.coordinateSystem = new THREE.Group();
     this.coordinateSystem.visible = this.showCoordinateSystem;
