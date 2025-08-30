@@ -10,6 +10,9 @@ export class SolarSystem {
   private planets: Planet[] = [];
   private orbits: THREE.Line[] = [];
   private showOrbits: boolean = true;
+  private showDistanceLabels: boolean = true;
+  private distanceLabels: THREE.Sprite[] = [];
+  private distanceLines: THREE.Line[] = [];
   private timeScale: number = 1;
   private currentTime: number = 0;
   private referenceJD: number = 2451545.0; // J2000.0 epoch
@@ -21,6 +24,7 @@ export class SolarSystem {
     this.createSun();
     this.createPlanets();
     this.createOrbits();
+    this.createDistanceLabels();
   }
 
   private createSun(): void {
@@ -147,6 +151,83 @@ export class SolarSystem {
     });
   }
 
+  private createDistanceLabels(): void {
+    // Get sorted orbital radii (including sun at center)
+    const orbitalRadii = [0, ...PLANETS.map(p => getScaledOrbitRadius(p.orbitalRadius))].sort((a, b) => a - b);
+    
+    // Create distance labels and lines between adjacent orbits
+    for (let i = 0; i < orbitalRadii.length - 1; i++) {
+      const innerRadius = orbitalRadii[i];
+      const outerRadius = orbitalRadii[i + 1];
+      const distance = outerRadius - innerRadius;
+      const middleRadius = (innerRadius + outerRadius) / 2;
+      
+      // Convert distance back to AU for display
+      const distanceAU = distance / 30; // Since getScaledOrbitRadius multiplies by 30
+      
+      // Create text canvas
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d')!;
+      canvas.width = 256;
+      canvas.height = 64;
+      
+      // Draw text
+      context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      context.font = 'bold 20px Arial';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(`${distanceAU.toFixed(2)} AU`, 128, 32);
+      
+      // Create sprite material
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false,
+      });
+      
+      // Create sprite and position it
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(8, 2, 1);
+      sprite.position.set(middleRadius, 2, 0); // Slightly above the orbital plane
+      sprite.visible = this.showDistanceLabels;
+      
+      this.distanceLabels.push(sprite);
+      this.scene.add(sprite);
+      
+      // Create line between orbits
+      const lineGeometry = new THREE.BufferGeometry();
+      const linePoints = [
+        new THREE.Vector3(innerRadius, 0, 0),
+        new THREE.Vector3(outerRadius, 0, 0)
+      ];
+      lineGeometry.setFromPoints(linePoints);
+      
+      const lineMaterial = new THREE.LineBasicMaterial({
+        color: 0x888888,
+        transparent: true,
+        opacity: 0.6,
+      });
+      
+      const line = new THREE.Line(lineGeometry, lineMaterial);
+      line.visible = this.showDistanceLabels;
+      
+      this.distanceLines.push(line);
+      this.scene.add(line);
+      
+      // Create arrow at the end of the line
+      const arrowGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+      const arrowMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 });
+      const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+      arrow.position.set(outerRadius - 1, 0, 0);
+      arrow.rotation.z = -Math.PI / 2; // Point right
+      arrow.visible = this.showDistanceLabels;
+      
+      this.distanceLines.push(arrow);
+      this.scene.add(arrow);
+    }
+  }
+
   public update(delta: number): void {
     // Update sun rotation
     this.sun.rotation.y += delta * 0.1;
@@ -244,6 +325,16 @@ export class SolarSystem {
     this.showOrbits = show;
     this.orbits.forEach(orbit => {
       orbit.visible = show;
+    });
+  }
+
+  public setShowDistanceLabels(show: boolean): void {
+    this.showDistanceLabels = show;
+    this.distanceLabels.forEach(label => {
+      label.visible = show;
+    });
+    this.distanceLines.forEach(line => {
+      line.visible = show;
     });
   }
 

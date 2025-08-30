@@ -200,6 +200,10 @@ class App {
     this.skybox.setStarFieldMode(show);
   }
 
+  public setShowDistanceLabels(show: boolean): void {
+    this.solarSystem.setShowDistanceLabels(show);
+  }
+
   private isUsingControls(): boolean {
     return this.controls.isMouseDown() || this.spaceMouseController.isActive();
   }
