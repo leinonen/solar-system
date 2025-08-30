@@ -13,6 +13,8 @@ export class Planet {
   private currentScale: number;
   private orbitAngle: number = 0;
   private rotationAngle: number = 0;
+  private referenceJD: number = 2451545.0; // J2000.0 epoch
+  private initialOrbitAngle: number = 0;
   public name: string;
   public radius: number;
 
@@ -31,8 +33,9 @@ export class Planet {
     this.createMoons();
     this.createRings();
     
-    // Random starting position
-    this.orbitAngle = Math.random() * Math.PI * 2;
+    // Calculate initial position based on reference date
+    this.initialOrbitAngle = this.calculateOrbitAngleForDate(this.referenceJD);
+    this.orbitAngle = this.initialOrbitAngle;
     this.updatePosition(0);
   }
 
@@ -101,13 +104,13 @@ export class Planet {
   public update(delta: number, time: number): void {
     // Update orbital position
     const orbitalSpeed = (2 * Math.PI) / (this.data.orbitalPeriod * 24 * 3600);
-    this.orbitAngle += orbitalSpeed * delta * 1000; // Speed up for visualization
+    this.orbitAngle = this.initialOrbitAngle + time * orbitalSpeed * 1000; // Speed up for visualization
     this.updatePosition(time);
     
     // Update planet rotation
     const rotationSpeed = (2 * Math.PI) / (Math.abs(this.data.rotationPeriod) * 3600);
     const rotationDirection = this.data.rotationPeriod < 0 ? -1 : 1;
-    this.rotationAngle += rotationSpeed * delta * rotationDirection * 1000;
+    this.rotationAngle = time * rotationSpeed * rotationDirection * 1000;
     this.mesh.rotation.y = this.rotationAngle;
     
     // Update moon orbits
@@ -195,5 +198,39 @@ export class Planet {
 
   public getPosition(): THREE.Vector3 {
     return this.group.position.clone();
+  }
+
+  public setReferenceDate(julianDay: number): void {
+    this.referenceJD = julianDay;
+    this.initialOrbitAngle = this.calculateOrbitAngleForDate(julianDay);
+    this.orbitAngle = this.initialOrbitAngle;
+  }
+
+  private calculateOrbitAngleForDate(julianDay: number): number {
+    // Calculate mean longitude at epoch for this planet
+    // Using simplified orbital elements - in reality you'd use proper ephemeris data
+    const daysSinceJ2000 = julianDay - 2451545.0;
+    const meanMotion = (2 * Math.PI) / (this.data.orbitalPeriod * 365.25);
+    
+    // Add the planet's longitude at epoch (simplified approximation)
+    const longitudeAtEpoch = this.getPlanetLongitudeAtEpoch();
+    
+    return (longitudeAtEpoch + meanMotion * daysSinceJ2000) % (2 * Math.PI);
+  }
+
+  private getPlanetLongitudeAtEpoch(): number {
+    // Approximate mean longitudes at J2000.0 epoch (in radians)
+    const longitudes: { [key: string]: number } = {
+      'Mercury': THREE.MathUtils.degToRad(252.25),
+      'Venus': THREE.MathUtils.degToRad(181.98),
+      'Earth': THREE.MathUtils.degToRad(100.47),
+      'Mars': THREE.MathUtils.degToRad(355.43),
+      'Jupiter': THREE.MathUtils.degToRad(34.35),
+      'Saturn': THREE.MathUtils.degToRad(50.08),
+      'Uranus': THREE.MathUtils.degToRad(314.05),
+      'Neptune': THREE.MathUtils.degToRad(304.35),
+    };
+    
+    return longitudes[this.name] || Math.random() * Math.PI * 2;
   }
 }

@@ -12,6 +12,7 @@ export class SolarSystem {
   private showOrbits: boolean = true;
   private timeScale: number = 1;
   private currentTime: number = 0;
+  private referenceJD: number = 2451545.0; // J2000.0 epoch
   private planetScale: number = 3;
 
   constructor(scene: THREE.Scene) {
@@ -108,6 +109,17 @@ export class SolarSystem {
 
   public setTimeScale(scale: number): void {
     this.timeScale = scale;
+  }
+
+  public setReferenceDate(julianDay: number): void {
+    this.referenceJD = julianDay;
+    // Reset current time to start from the new reference date
+    this.currentTime = 0;
+    
+    // Update all planets to use the new reference date
+    this.planets.forEach((planet) => {
+      planet.setReferenceDate(julianDay);
+    });
   }
 
   public setShowOrbits(show: boolean): void {

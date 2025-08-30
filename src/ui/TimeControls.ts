@@ -78,7 +78,22 @@ export class TimeControls {
   private onDateChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const date = new Date(input.value);
-    // This would connect to the Horizons API to get positions for this date
-    console.log('Date changed to:', date);
+    
+    // Calculate Julian day number for the selected date
+    const jd = this.dateToJulianDay(date);
+    
+    // Set the solar system's reference time to this date
+    this.solarSystem.setReferenceDate(jd);
+    
+    console.log('Date changed to:', date, 'JD:', jd);
+  }
+  
+  private dateToJulianDay(date: Date): number {
+    const a = Math.floor((14 - (date.getMonth() + 1)) / 12);
+    const y = date.getFullYear() + 4800 - a;
+    const m = (date.getMonth() + 1) + 12 * a - 3;
+    
+    return date.getDate() + Math.floor((153 * m + 2) / 5) + 365 * y + 
+           Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
   }
 }
