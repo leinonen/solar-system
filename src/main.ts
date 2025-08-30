@@ -33,6 +33,7 @@ class App {
     this.setupLights();
     
     this.solarSystem = new SolarSystem(this.scene);
+    this.solarSystem.setCamera(this.camera);
     this.skybox = new Skybox(this.scene);
     
     this.controls = new FallbackControls(this.camera, this.renderer.domElement);

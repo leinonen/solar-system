@@ -14,6 +14,7 @@ export class SolarSystem {
   private currentTime: number = 0;
   private referenceJD: number = 2451545.0; // J2000.0 epoch
   private planetScale: number = 3;
+  private camera?: THREE.Camera;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -110,21 +111,24 @@ export class SolarSystem {
   private createOrbits(): void {
     PLANETS.forEach((planetData) => {
       const orbitRadius = getScaledOrbitRadius(planetData.orbitalRadius);
-      const curve = new THREE.EllipseCurve(
-        0, 0,
-        orbitRadius, orbitRadius,
-        0, 2 * Math.PI,
-        false,
-        0
-      );
+      const segments = 200;
       
-      const points = curve.getPoints(100);
-      const geometry = new THREE.BufferGeometry().setFromPoints(
-        points.map(p => new THREE.Vector3(p.x, 0, p.y))
-      );
+      const points = [];
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const x = Math.cos(angle) * orbitRadius;
+        const z = Math.sin(angle) * orbitRadius;
+        points.push(new THREE.Vector3(x, 0, z));
+      }
+      
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      
+      // Initialize vertex colors array
+      const colors = new Float32Array(points.length * 3);
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       
       const material = new THREE.LineBasicMaterial({
-        color: 0x888888,
+        vertexColors: true,
         transparent: true,
         opacity: 0.8,
         linewidth: 2,
@@ -133,6 +137,11 @@ export class SolarSystem {
       const orbit = new THREE.Line(geometry, material);
       orbit.rotation.x = THREE.MathUtils.degToRad(planetData.inclination);
       orbit.visible = this.showOrbits;
+      orbit.userData = { 
+        orbitRadius: orbitRadius,
+        planetName: planetData.name 
+      };
+      
       this.orbits.push(orbit);
       this.scene.add(orbit);
     });
@@ -149,6 +158,71 @@ export class SolarSystem {
     this.planets.forEach((planet) => {
       planet.update(delta, this.currentTime);
     });
+    
+    // Update orbit shading
+    if (this.camera && this.showOrbits) {
+      this.updateOrbitShading();
+    }
+  }
+  
+  private updateOrbitShading(): void {
+    if (!this.camera) return;
+    
+    this.orbits.forEach((orbit) => {
+      const geometry = orbit.geometry as THREE.BufferGeometry;
+      const colorAttribute = geometry.getAttribute('color') as THREE.BufferAttribute;
+      const positionAttribute = geometry.getAttribute('position') as THREE.BufferAttribute;
+      
+      if (!colorAttribute || !positionAttribute) return;
+      
+      const colors = colorAttribute.array as Float32Array;
+      const positions = positionAttribute.array as Float32Array;
+      
+      // Get orbit's world matrix for transforming local positions
+      orbit.updateMatrixWorld();
+      
+      for (let i = 0; i < positionAttribute.count; i++) {
+        // Get local position
+        const localPos = new THREE.Vector3(
+          positions[i * 3],
+          positions[i * 3 + 1],
+          positions[i * 3 + 2]
+        );
+        
+        // Transform to world space
+        const worldPos = localPos.clone().applyMatrix4(orbit.matrixWorld);
+        
+        // Calculate distance from camera to this point
+        const distance = this.camera.position.distanceTo(worldPos);
+        
+        // Calculate relative brightness based on distance
+        // Closer points are brighter, farther points are dimmer
+        const maxDistance = 800;
+        const minDistance = 50;
+        
+        let brightness;
+        if (distance < minDistance) {
+          brightness = 1.0; // Maximum brightness for very close points
+        } else if (distance > maxDistance) {
+          brightness = 0.2; // Minimum brightness for distant points
+        } else {
+          // Smooth gradient between min and max distance
+          const t = (distance - minDistance) / (maxDistance - minDistance);
+          brightness = 1.0 - (t * 0.8); // Range from 1.0 to 0.2
+        }
+        
+        // Apply slight blue tint to make it look more space-like
+        colors[i * 3] = brightness * 0.7;     // Red
+        colors[i * 3 + 1] = brightness * 0.8; // Green  
+        colors[i * 3 + 2] = brightness;       // Blue
+      }
+      
+      colorAttribute.needsUpdate = true;
+    });
+  }
+  
+  public setCamera(camera: THREE.Camera): void {
+    this.camera = camera;
   }
 
   public setTimeScale(scale: number): void {
