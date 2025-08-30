@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Solar System Simulator</title>
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="canvas"></canvas>
+    <div id="labels"></div>
+    
+    <div id="info-panel" class="panel">
+      <h2>Solar System Explorer</h2>
+      <p id="planet-info">Hover over a planet for information</p>
+    </div>
+    
+    <div id="time-controls" class="panel">
+      <button id="play-pause">⏸</button>
+      <input type="range" id="time-speed" min="-100" max="100" value="1">
+      <span id="time-display">Real Time</span>
+      <input type="date" id="date-picker">
+    </div>
+    
+    <div id="settings" class="panel">
+      <button id="settings-toggle">⚙️</button>
+      <div id="settings-content" class="hidden">
+        <label>
+          <input type="checkbox" id="show-orbits" checked> Show Orbits
+        </label>
+        <label>
+          <input type="checkbox" id="show-labels" checked> Show Labels
+        </label>
+        <label>
+          Planet Scale: <input type="range" id="planet-scale" min="1" max="10" step="0.5" value="3">
+        </label>
+        <label>
+          <input type="checkbox" id="realistic-scale"> Realistic Scale
+        </label>
+      </div>
+    </div>
+    
+    <div id="spacemouse-status" class="panel">
+      <span id="spacemouse-indicator">🖱️ SpaceMouse: <span id="spacemouse-state">Not Connected</span></span>
+      <button id="connect-spacemouse" class="hidden">Connect SpaceMouse</button>
+    </div>
+  </div>
+  
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
