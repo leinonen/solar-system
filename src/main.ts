@@ -103,14 +103,23 @@ class App {
     if (!this.isUsingControls()) {
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const intersects = this.raycaster.intersectObjects(
-        this.solarSystem.getPlanetMeshes()
+        [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
       );
       
       if (intersects.length > 0) {
-        const planet = this.solarSystem.getPlanetByMesh(intersects[0].object);
-        if (planet) {
-          this.updatePlanetInfo(planet.name);
+        const intersectedMesh = intersects[0].object;
+        
+        // Check if it's the Sun
+        if (intersectedMesh === this.solarSystem.getSun()) {
+          this.updatePlanetInfo('Sun');
           document.body.style.cursor = 'pointer';
+        } else {
+          // Check if it's a planet
+          const planet = this.solarSystem.getPlanetByMesh(intersectedMesh);
+          if (planet) {
+            this.updatePlanetInfo(planet.name);
+            document.body.style.cursor = 'pointer';
+          }
         }
       } else {
         document.body.style.cursor = 'default';
@@ -152,7 +161,17 @@ class App {
     const infoElement = document.getElementById('planet-info');
     if (!infoElement) return;
     
-    if (planetName) {
+    if (planetName === 'Sun') {
+      const sunData = this.solarSystem.getSunData();
+      infoElement.innerHTML = `
+        <strong>${sunData.name}</strong><br>
+        Radius: ${sunData.radius.toLocaleString()} km<br>
+        Mass: ${sunData.mass.toExponential(2)} kg<br>
+        Surface Temperature: ${sunData.temperature.surface.toLocaleString()}°C<br>
+        Core Temperature: ${sunData.temperature.core.toLocaleString()}°C<br>
+        Type: G-type main-sequence star
+      `;
+    } else if (planetName) {
       const planet = this.solarSystem.getPlanetData(planetName);
       if (planet) {
         infoElement.innerHTML = `
@@ -166,7 +185,7 @@ class App {
         `;
       }
     } else {
-      infoElement.textContent = 'Hover over a planet for information';
+      infoElement.textContent = 'Hover over a planet or the Sun for information';
     }
   }
 

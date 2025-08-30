@@ -370,4 +370,8 @@ export class SolarSystem {
   public getSun(): THREE.Mesh {
     return this.sun;
   }
+
+  public getSunData() {
+    return SUN_DATA;
+  }
 }
