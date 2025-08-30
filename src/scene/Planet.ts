@@ -60,9 +60,13 @@ export class Planet {
         }
       );
       
+      // Dim Saturn and Jupiter
+      const isDimPlanet = this.name === 'Saturn' || this.name === 'Jupiter';
+      const colorTint = isDimPlanet ? 0x888888 : 0xffffff;
+      
       material = new THREE.MeshLambertMaterial({
         map: texture,
-        color: 0xffffff, // White to not tint the texture
+        color: colorTint,
       });
     } catch (error) {
       // Fallback to color material

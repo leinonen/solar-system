@@ -117,17 +117,7 @@ class App {
   }
 
   private onMouseClick(_event: MouseEvent): void {
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(
-      this.solarSystem.getPlanetMeshes()
-    );
-    
-    if (intersects.length > 0) {
-      const planet = this.solarSystem.getPlanetByMesh(intersects[0].object);
-      if (planet) {
-        this.focusOnPlanet(planet);
-      }
-    }
+    // Click handling removed - only labels can focus on planets
   }
 
   private focusOnPlanet(planet: any): void {
