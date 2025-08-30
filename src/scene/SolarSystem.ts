@@ -26,9 +26,29 @@ export class SolarSystem {
     const sunRadius = getScaledRadius(SUN_DATA.radius, true);
     const geometry = new THREE.SphereGeometry(sunRadius, 64, 64);
     
-    const material = new THREE.MeshBasicMaterial({
-      color: SUN_DATA.color,
-    });
+    // Try to load sun texture, fallback to color
+    const textureLoader = new THREE.TextureLoader();
+    let material: THREE.Material;
+    
+    try {
+      const sunTexture = textureLoader.load(
+        '/textures/sun.jpg',
+        undefined,
+        undefined,
+        () => {
+          console.warn('Sun texture not found, using color fallback');
+        }
+      );
+      
+      material = new THREE.MeshBasicMaterial({
+        map: sunTexture,
+        color: 0xffffff,
+      });
+    } catch (error) {
+      material = new THREE.MeshBasicMaterial({
+        color: SUN_DATA.color,
+      });
+    }
     
     this.sun = new THREE.Mesh(geometry, material);
     this.sun.position.set(0, 0, 0);
