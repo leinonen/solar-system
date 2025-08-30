@@ -195,4 +195,8 @@ export class FallbackControls {
   public getTarget(): THREE.Vector3 {
     return this.target.clone();
   }
+
+  public isMouseDown(): boolean {
+    return this.mouseDown;
+  }
 }

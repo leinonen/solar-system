@@ -96,20 +96,23 @@ class App {
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(
-      this.solarSystem.getPlanetMeshes()
-    );
-    
-    if (intersects.length > 0) {
-      const planet = this.solarSystem.getPlanetByMesh(intersects[0].object);
-      if (planet) {
-        this.updatePlanetInfo(planet.name);
-        document.body.style.cursor = 'pointer';
+    // Only detect planet intersections when not actively using camera controls
+    if (!this.isUsingControls()) {
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const intersects = this.raycaster.intersectObjects(
+        this.solarSystem.getPlanetMeshes()
+      );
+      
+      if (intersects.length > 0) {
+        const planet = this.solarSystem.getPlanetByMesh(intersects[0].object);
+        if (planet) {
+          this.updatePlanetInfo(planet.name);
+          document.body.style.cursor = 'pointer';
+        }
+      } else {
+        document.body.style.cursor = 'default';
+        this.updatePlanetInfo(null);
       }
-    } else {
-      document.body.style.cursor = 'default';
-      this.updatePlanetInfo(null);
     }
   }
 
@@ -204,6 +207,10 @@ class App {
 
   public setShowStarField(show: boolean): void {
     this.skybox.setStarFieldMode(show);
+  }
+
+  private isUsingControls(): boolean {
+    return this.controls.isMouseDown() || this.spaceMouseController.isActive();
   }
 }
 
