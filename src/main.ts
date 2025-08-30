@@ -42,6 +42,10 @@ class App {
     this.settings = new Settings(this.solarSystem, this);
     this.labels = new Labels(this.solarSystem, this.camera, this.renderer);
     
+    this.labels.setOnPlanetClick((planetName: string) => {
+      this.focusOnPlanetByName(planetName);
+    });
+    
     this.setupEventListeners();
     this.animate();
   }
@@ -124,13 +128,28 @@ class App {
   }
 
   private focusOnPlanet(planet: any): void {
-    const targetPosition = new THREE.Vector3().copy(planet.mesh.position);
+    const targetPosition = planet.getPosition();
     const distance = planet.radius * 5;
     
     const offset = new THREE.Vector3(distance, distance * 0.5, distance);
     const cameraTarget = targetPosition.clone().add(offset);
     
     this.controls.smoothMoveTo(cameraTarget, targetPosition);
+  }
+
+  private focusOnPlanetByName(planetName: string): void {
+    if (planetName === 'Sun') {
+      const sunPosition = this.solarSystem.getSun().position;
+      const distance = 50;
+      const offset = new THREE.Vector3(distance, distance * 0.5, distance);
+      const cameraTarget = sunPosition.clone().add(offset);
+      this.controls.smoothMoveTo(cameraTarget, sunPosition);
+    } else {
+      const planet = this.solarSystem.getPlanets().find(p => p.name === planetName);
+      if (planet) {
+        this.focusOnPlanet(planet);
+      }
+    }
   }
 
   private updatePlanetInfo(planetName: string | null): void {

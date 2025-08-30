@@ -9,6 +9,7 @@ export class Labels {
   private labelRenderer: CSS2DRenderer;
   private labels: Map<string, CSS2DObject> = new Map();
   private visible: boolean = true;
+  private onPlanetClick?: (planetName: string) => void;
 
   constructor(solarSystem: SolarSystem, camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) {
     this.solarSystem = solarSystem;
@@ -56,6 +57,13 @@ export class Labels {
     labelDiv.style.borderRadius = '4px';
     labelDiv.style.whiteSpace = 'nowrap';
     labelDiv.style.pointerEvents = 'auto';
+    labelDiv.style.cursor = 'pointer';
+    
+    labelDiv.addEventListener('click', () => {
+      if (this.onPlanetClick) {
+        this.onPlanetClick(text);
+      }
+    });
     
     const label = new CSS2DObject(labelDiv);
     label.position.set(0, -2, 0); // Position below the planet
@@ -98,5 +106,9 @@ export class Labels {
 
   private onWindowResize(): void {
     this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  public setOnPlanetClick(callback: (planetName: string) => void): void {
+    this.onPlanetClick = callback;
   }
 }

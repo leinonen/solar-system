@@ -9,6 +9,10 @@ export class FallbackControls {
   private targetPosition: THREE.Vector3;
   private currentTarget: THREE.Vector3;
   private isAnimating: boolean = false;
+  private isPositionAnimating: boolean = false;
+  private startPosition: THREE.Vector3;
+  private startTarget: THREE.Vector3;
+  private animationProgress: number = 0;
   
   private mouseDown: boolean = false;
   private mouseX: number = 0;
@@ -28,6 +32,8 @@ export class FallbackControls {
     this.target = new THREE.Vector3(0, 0, 0);
     this.currentTarget = new THREE.Vector3(0, 0, 0);
     this.targetPosition = this.camera.position.clone();
+    this.startPosition = new THREE.Vector3();
+    this.startTarget = new THREE.Vector3();
     
     // Initialize spherical coordinates
     const offset = this.camera.position.clone().sub(this.target);
@@ -117,7 +123,28 @@ export class FallbackControls {
     }
     
     // Smooth transitions
-    if (this.isAnimating) {
+    if (this.isPositionAnimating) {
+      this.animationProgress += 0.02;
+      if (this.animationProgress >= 1) {
+        this.animationProgress = 1;
+        this.isPositionAnimating = false;
+      }
+      
+      // Smooth easing function
+      const t = this.easeInOutCubic(this.animationProgress);
+      
+      // Interpolate camera position
+      this.camera.position.lerpVectors(this.startPosition, this.targetPosition, t);
+      
+      // Interpolate look-at target
+      this.currentTarget.lerpVectors(this.startTarget, this.target, t);
+      this.camera.lookAt(this.currentTarget);
+      
+      // Update spherical coordinates to match current state
+      const offset = this.camera.position.clone().sub(this.currentTarget);
+      this.spherical.setFromVector3(offset);
+      this.targetSpherical.copy(this.spherical);
+    } else if (this.isAnimating) {
       this.currentTarget.lerp(this.target, 0.1);
       if (this.currentTarget.distanceTo(this.target) < 0.1) {
         this.isAnimating = false;
@@ -126,16 +153,19 @@ export class FallbackControls {
       this.target.copy(this.currentTarget);
     }
     
-    // Smooth spherical coordinate updates
-    this.spherical.theta += (this.targetSpherical.theta - this.spherical.theta) * this.dampingFactor;
-    this.spherical.phi += (this.targetSpherical.phi - this.spherical.phi) * this.dampingFactor;
-    this.spherical.radius += (this.targetSpherical.radius - this.spherical.radius) * this.dampingFactor;
-    
-    // Update camera position from spherical coordinates
-    const offset = new THREE.Vector3();
-    offset.setFromSpherical(this.spherical);
-    this.camera.position.copy(this.target).add(offset);
-    this.camera.lookAt(this.target);
+    // Only update spherical coordinates if not doing position animation
+    if (!this.isPositionAnimating) {
+      // Smooth spherical coordinate updates
+      this.spherical.theta += (this.targetSpherical.theta - this.spherical.theta) * this.dampingFactor;
+      this.spherical.phi += (this.targetSpherical.phi - this.spherical.phi) * this.dampingFactor;
+      this.spherical.radius += (this.targetSpherical.radius - this.spherical.radius) * this.dampingFactor;
+      
+      // Update camera position from spherical coordinates
+      const offset = new THREE.Vector3();
+      offset.setFromSpherical(this.spherical);
+      this.camera.position.copy(this.target).add(offset);
+      this.camera.lookAt(this.target);
+    }
     
     // Reset mouse deltas
     this.mouseDeltaX = 0;
@@ -143,13 +173,18 @@ export class FallbackControls {
   }
 
   public smoothMoveTo(position: THREE.Vector3, lookAt: THREE.Vector3): void {
+    this.startPosition.copy(this.camera.position);
+    this.startTarget.copy(this.currentTarget);
     this.targetPosition.copy(position);
     this.target.copy(lookAt);
-    this.currentTarget.copy(lookAt);
     
-    const offset = position.clone().sub(lookAt);
-    this.targetSpherical.setFromVector3(offset);
-    this.isAnimating = true;
+    this.animationProgress = 0;
+    this.isPositionAnimating = true;
+    this.isAnimating = false;
+  }
+
+  private easeInOutCubic(t: number): number {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
   public setTarget(target: THREE.Vector3): void {
