@@ -3,11 +3,50 @@ import * as THREE from 'three';
 export class StarField {
   private scene: THREE.Scene;
   private stars!: THREE.Points;
+  private gradient!: THREE.Mesh;
   private starCount: number = 15000;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
+    this.createGradientBackground();
     this.createStarField();
+  }
+
+  private createGradientBackground(): void {
+    const geometry = new THREE.SphereGeometry(9500, 32, 32);
+    
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec3 vPosition;
+        void main() {
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vPosition;
+        
+        void main() {
+          vec3 normalizedPos = normalize(vPosition);
+          
+          // Milky Way-like gradient (single purple band)
+          float band = normalizedPos.y;
+          float milkyWayBand = smoothstep(-0.3, 0.0, band) * smoothstep(0.3, 0.0, band);
+          
+          vec3 black = vec3(0.0, 0.0, 0.0);
+          vec3 purple = vec3(0.15, 0.05, 0.25);
+          
+          vec3 color = mix(black, purple, milkyWayBand);
+          
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+
+    this.gradient = new THREE.Mesh(geometry, material);
+    this.scene.add(this.gradient);
   }
 
   private createStarField(): void {

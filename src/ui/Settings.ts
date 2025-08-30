@@ -2,7 +2,7 @@ interface AppInterface {
   setShowOrbits(show: boolean): void;
   setShowLabels(show: boolean): void;
   setPlanetScale(scale: number): void;
-  setShowStarField(show: boolean): void;
+  setShowMilkyWay(show: boolean): void;
   setShowDistanceLabels(show: boolean): void;
 }
 
@@ -16,7 +16,7 @@ export class Settings {
   private showOrbitsCheckbox: HTMLInputElement | null;
   private showLabelsCheckbox: HTMLInputElement | null;
   private planetScaleSlider: HTMLInputElement | null;
-  private showStarFieldCheckbox: HTMLInputElement | null;
+  private showMilkyWayCheckbox: HTMLInputElement | null;
   private showDistanceLabelsCheckbox: HTMLInputElement | null;
   private isOpen: boolean = false;
 
@@ -32,7 +32,7 @@ export class Settings {
     this.showOrbitsCheckbox = document.getElementById('show-orbits') as HTMLInputElement;
     this.showLabelsCheckbox = document.getElementById('show-labels') as HTMLInputElement;
     this.planetScaleSlider = document.getElementById('planet-scale') as HTMLInputElement;
-    this.showStarFieldCheckbox = document.getElementById('show-starfield') as HTMLInputElement;
+    this.showMilkyWayCheckbox = document.getElementById('show-milkyway') as HTMLInputElement;
     this.showDistanceLabelsCheckbox = document.getElementById('show-distance-labels') as HTMLInputElement;
 
     if (this.settingsToggle && this.settingsContent) {
@@ -62,10 +62,10 @@ export class Settings {
     }
 
 
-    if (this.showStarFieldCheckbox) {
-      this.showStarFieldCheckbox.addEventListener('change', (e) => {
+    if (this.showMilkyWayCheckbox) {
+      this.showMilkyWayCheckbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
-        this.app.setShowStarField(target.checked);
+        this.app.setShowMilkyWay(target.checked);
       });
     }
 

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import { StarField } from './StarField';
 
 export class Skybox {
   private scene: THREE.Scene;
-  private skybox: THREE.Mesh;
-  private starFieldMode: boolean = false;
+  private skybox: THREE.Mesh | null = null;
+  private starField: StarField | null = null;
+  private starFieldMode: boolean = true;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -11,19 +13,21 @@ export class Skybox {
   }
 
   private createSkybox(): void {
+    if (this.starFieldMode) {
+      // Use StarField class instead of skybox
+      this.starField = new StarField(this.scene);
+      return;
+    }
+    
     // Create a large sphere for the skybox
     const geometry = new THREE.SphereGeometry(10000, 64, 64);
     let material: THREE.Material;
     
-    if (this.starFieldMode) {
-      // Use procedural star field
-      material = this.createStarField();
-    } else {
-      // Try to load Milky Way texture, fallback to gradient
-      const textureLoader = new THREE.TextureLoader();
+    // Try to load Milky Way texture, fallback to gradient
+    const textureLoader = new THREE.TextureLoader();
     
-      try {
-        const milkyWayTexture = textureLoader.load(
+    try {
+      const milkyWayTexture = textureLoader.load(
         '/textures/milkyway.jpg',
         undefined,
         undefined,
@@ -75,11 +79,15 @@ export class Skybox {
         `,
         side: THREE.BackSide,
         depthWrite: false,
-        });
-      } catch (error) {
-        // Fallback to star field if texture fails
-        material = this.createStarField();
-      }
+      });
+    } catch (error) {
+      // Fallback to basic gradient
+      material = new THREE.MeshBasicMaterial({
+        color: 0x000511,
+        side: THREE.BackSide,
+        transparent: true,
+        opacity: 0.8,
+      });
     }
     
     this.skybox = new THREE.Mesh(geometry, material);
@@ -87,58 +95,24 @@ export class Skybox {
   }
 
   public setVisible(visible: boolean): void {
-    this.skybox.visible = visible;
+    if (this.skybox) {
+      this.skybox.visible = visible;
+    }
   }
 
   public setStarFieldMode(useStarField: boolean): void {
     this.starFieldMode = useStarField;
-    this.scene.remove(this.skybox);
+    
+    // Clean up existing objects
+    if (this.skybox) {
+      this.scene.remove(this.skybox);
+      this.skybox = null;
+    }
+    if (this.starField) {
+      // StarField doesn't have cleanup method, but it's managed by scene
+      this.starField = null;
+    }
+    
     this.createSkybox();
-  }
-
-  private createStarField(): THREE.Material {
-    // Create procedural star field
-    const vertexShader = `
-      varying vec3 vWorldPosition;
-      void main() {
-        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-        vWorldPosition = worldPosition.xyz;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `;
-    
-    const fragmentShader = `
-      varying vec3 vWorldPosition;
-      
-      void main() {
-        vec3 normalizedPos = normalize(vWorldPosition);
-        
-        // Generate stars using noise
-        float star1 = sin(normalizedPos.x * 1000.0) * cos(normalizedPos.y * 1000.0) * sin(normalizedPos.z * 1000.0);
-        float star2 = sin(normalizedPos.x * 1500.0) * cos(normalizedPos.y * 1500.0) * sin(normalizedPos.z * 1500.0);
-        float stars = smoothstep(0.99, 1.0, star1) + smoothstep(0.995, 1.0, star2) * 0.5;
-        
-        // Deep space gradient
-        float intensity = pow(0.7 - dot(normalizedPos, vec3(0.0, 1.0, 0.0)), 2.0);
-        vec3 color1 = vec3(0.01, 0.01, 0.02);
-        vec3 color2 = vec3(0.02, 0.02, 0.05);
-        vec3 color3 = vec3(0.05, 0.03, 0.08);
-        
-        vec3 color = mix(color1, color2, intensity);
-        color = mix(color, color3, pow(intensity, 3.0));
-        
-        // Add stars
-        color += vec3(stars);
-        
-        gl_FragColor = vec4(color, 1.0);
-      }
-    `;
-    
-    return new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      side: THREE.BackSide,
-      depthWrite: false,
-    });
   }
 }

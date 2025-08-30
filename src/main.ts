@@ -198,8 +198,8 @@ class App {
   }
 
 
-  public setShowStarField(show: boolean): void {
-    this.skybox.setStarFieldMode(show);
+  public setShowMilkyWay(show: boolean): void {
+    this.skybox.setStarFieldMode(!show);
   }
 
   public setShowDistanceLabels(show: boolean): void {
