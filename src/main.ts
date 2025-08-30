@@ -164,7 +164,9 @@ class App {
     
     const delta = this.clock.getDelta();
     
-    this.controls.update();
+    if (!this.spaceMouseController.isActive()) {
+      this.controls.update();
+    }
     this.spaceMouseController.update();
     this.solarSystem.update(delta);
     this.labels.update();

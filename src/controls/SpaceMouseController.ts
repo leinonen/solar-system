@@ -1,25 +1,41 @@
 import * as THREE from 'three';
 
-interface SpaceMouseData {
-  translation: { x: number; y: number; z: number };
-  rotation: { x: number; y: number; z: number };
-  buttons: number;
+// WebHID type declarations
+declare global {
+  interface Navigator {
+    hid: {
+      getDevices(): Promise<HIDDevice[]>;
+      requestDevice(options: { filters: Array<{ vendorId: number; productId?: number }> }): Promise<HIDDevice[]>;
+    };
+  }
+  
+  interface HIDDevice {
+    vendorId: number;
+    productId: number;
+    productName: string;
+    opened: boolean;
+    open(): Promise<void>;
+    close(): Promise<void>;
+    addEventListener(type: 'inputreport', listener: (event: HIDInputReportEvent) => void): void;
+  }
+  
+  interface HIDInputReportEvent extends Event {
+    data: DataView;
+    reportId: number;
+  }
 }
 
 export class SpaceMouseController {
   private camera: THREE.PerspectiveCamera;
   private device: HIDDevice | null = null;
   private isConnected: boolean = false;
-  private translation: THREE.Vector3;
-  private rotation: THREE.Vector3;
-  private sensitivity: number = 0.01;
-  private rotationSensitivity: number = 0.001;
+  private panSensitivity: number = 0.01;
+  private zoomSensitivity: number = 0.02;
+  private rotationSensitivity: number = 0.0003;
+  private deadZone: number = 2;
   
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
-    this.translation = new THREE.Vector3();
-    this.rotation = new THREE.Vector3();
-    
     this.initializeSpaceMouse();
   }
 
@@ -126,16 +142,77 @@ export class SpaceMouseController {
       const y = this.getSignedInt16(data, 2);
       const z = this.getSignedInt16(data, 4);
       
-      this.translation.set(x, -z, -y); // Adjust axes for Three.js coordinate system
-      this.translation.multiplyScalar(this.sensitivity);
+      // Apply dead zone to reduce jitter
+      const filteredX = Math.abs(x) > this.deadZone ? x : 0;
+      const filteredY = Math.abs(y) > this.deadZone ? y : 0;
+      const filteredZ = Math.abs(z) > this.deadZone ? z : 0;
+      
+      
+      // Pan movement (X) - move left/right relative to camera
+      if (filteredX !== 0) {
+        const right = new THREE.Vector3(1, 0, 0);
+        right.applyQuaternion(this.camera.quaternion);
+        
+        const movement = new THREE.Vector3();
+        movement.addScaledVector(right, filteredX * this.panSensitivity);
+        this.camera.position.add(movement);
+      }
+      
+      // Forward/Backward movement (Y) - move forward/backward along camera direction
+      if (filteredY !== 0) {
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(this.camera.quaternion);
+        forward.multiplyScalar(-filteredY * this.zoomSensitivity);
+        this.camera.position.add(forward);
+      }
+      
+      // Up/Down movement (Z) - move up/down relative to orbital plane (world Y)
+      if (filteredZ !== 0) {
+        const worldUp = new THREE.Vector3(0, 1, 0);
+        const movement = new THREE.Vector3();
+        movement.addScaledVector(worldUp, filteredZ * this.panSensitivity);
+        this.camera.position.add(movement);
+      }
+      
     } else if (reportId === 2) {
       // Rotation data
       const rx = this.getSignedInt16(data, 0);
       const ry = this.getSignedInt16(data, 2);
       const rz = this.getSignedInt16(data, 4);
       
-      this.rotation.set(-rx, rz, ry); // Adjust axes for Three.js coordinate system
-      this.rotation.multiplyScalar(this.rotationSensitivity);
+      // Apply dead zone to reduce jitter
+      const filteredRx = Math.abs(rx) > this.deadZone ? rx : 0;
+      const filteredRy = Math.abs(ry) > this.deadZone ? ry : 0;
+      const filteredRz = Math.abs(rz) > this.deadZone ? rz : 0;
+      
+      // Apply rotations directly
+      if (filteredRx !== 0) {
+        const right = new THREE.Vector3(1, 0, 0);
+        right.applyQuaternion(this.camera.quaternion);
+        const pitchQuat = new THREE.Quaternion().setFromAxisAngle(
+          right,
+          -filteredRx * this.rotationSensitivity
+        );
+        this.camera.quaternion.multiplyQuaternions(pitchQuat, this.camera.quaternion);
+      }
+      
+      if (filteredRy !== 0) {
+        const yawQuat = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          -filteredRy * this.rotationSensitivity
+        );
+        this.camera.quaternion.multiplyQuaternions(yawQuat, this.camera.quaternion);
+      }
+      
+      // Twist rotation (Z) - rotate around orbital plane axis (world Y)
+      if (filteredRz !== 0) {
+        const rollQuat = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          filteredRz * this.rotationSensitivity
+        );
+        this.camera.quaternion.multiplyQuaternions(rollQuat, this.camera.quaternion);
+      }
+      
     } else if (reportId === 3) {
       // Button data
       const buttons = data.getUint8(0);
@@ -166,31 +243,8 @@ export class SpaceMouseController {
   }
 
   public update(): void {
-    if (!this.isConnected) return;
-    
-    // Apply translation
-    if (this.translation.length() > 0.001) {
-      const movement = this.translation.clone();
-      movement.applyQuaternion(this.camera.quaternion);
-      this.camera.position.add(movement);
-    }
-    
-    // Apply rotation
-    if (this.rotation.length() > 0.001) {
-      const euler = new THREE.Euler(
-        this.rotation.x,
-        this.rotation.y,
-        this.rotation.z,
-        'XYZ'
-      );
-      
-      const quaternion = new THREE.Quaternion().setFromEuler(euler);
-      this.camera.quaternion.multiplyQuaternions(quaternion, this.camera.quaternion);
-    }
-    
-    // Decay translation and rotation for smooth stop
-    this.translation.multiplyScalar(0.85);
-    this.rotation.multiplyScalar(0.85);
+    // All movement is now handled directly in handleInput()
+    // No momentum system - immediate response only
   }
 
   public disconnect(): void {
