@@ -43,9 +43,33 @@ export class Planet {
     const radius = getScaledRadius(this.data.radius) * this.currentScale;
     const geometry = new THREE.SphereGeometry(radius, 64, 64);
     
-    const material = new THREE.MeshLambertMaterial({
-      color: this.data.color,
-    });
+    const textureLoader = new THREE.TextureLoader();
+    const texturePath = `/textures/${this.name.toLowerCase()}.jpg`;
+    
+    let material: THREE.Material;
+    
+    // Try to load texture, fallback to color if not found
+    try {
+      const texture = textureLoader.load(
+        texturePath,
+        undefined, // onLoad
+        undefined, // onProgress
+        () => {
+          // onError - fallback to color
+          console.warn(`Texture not found for ${this.name}, using color fallback`);
+        }
+      );
+      
+      material = new THREE.MeshLambertMaterial({
+        map: texture,
+        color: 0xffffff, // White to not tint the texture
+      });
+    } catch (error) {
+      // Fallback to color material
+      material = new THREE.MeshLambertMaterial({
+        color: this.data.color,
+      });
+    }
     
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.castShadow = true;
@@ -61,11 +85,30 @@ export class Planet {
       const moonRadius = getScaledRadius(moonData.radius) * this.currentScale * 2;
       const geometry = new THREE.SphereGeometry(moonRadius, 16, 16);
       
-      const material = new THREE.MeshPhongMaterial({
-        color: 0xcccccc,
-        emissive: 0x222222,
-        emissiveIntensity: 0.1,
-      });
+      const textureLoader = new THREE.TextureLoader();
+      const texturePath = `/textures/${moonData.name.toLowerCase()}.jpg`;
+      
+      let material: THREE.Material;
+      
+      try {
+        const texture = textureLoader.load(
+          texturePath,
+          undefined,
+          undefined,
+          () => {
+            console.warn(`Texture not found for ${moonData.name}, using color fallback`);
+          }
+        );
+        
+        material = new THREE.MeshLambertMaterial({
+          map: texture,
+          color: 0xffffff,
+        });
+      } catch (error) {
+        material = new THREE.MeshLambertMaterial({
+          color: 0xcccccc,
+        });
+      }
       
       const moon = new THREE.Mesh(geometry, material);
       moon.castShadow = true;
