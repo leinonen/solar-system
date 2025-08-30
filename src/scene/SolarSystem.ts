@@ -374,4 +374,8 @@ export class SolarSystem {
   public getSunData() {
     return SUN_DATA;
   }
+
+  public getScene(): THREE.Scene {
+    return this.scene;
+  }
 }

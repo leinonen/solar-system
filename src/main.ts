@@ -6,6 +6,7 @@ import { SpaceMouseController } from './controls/SpaceMouseController';
 import { TimeControls } from './ui/TimeControls';
 import { Settings } from './ui/Settings';
 import { Labels } from './ui/Labels';
+import { Selection } from './ui/Selection';
 
 class App {
   private scene: THREE.Scene;
@@ -18,6 +19,7 @@ class App {
   private timeControls: TimeControls;
   private settings: Settings;
   private labels: Labels;
+  private selection: Selection;
   private clock: THREE.Clock;
   private raycaster: THREE.Raycaster;
   private mouse: THREE.Vector2;
@@ -42,9 +44,14 @@ class App {
     this.timeControls = new TimeControls(this.solarSystem);
     this.settings = new Settings(this.solarSystem, this);
     this.labels = new Labels(this.solarSystem, this.camera, this.renderer);
+    this.selection = new Selection(this.solarSystem, this.camera);
     
     this.labels.setOnPlanetClick((planetName: string) => {
-      this.focusOnPlanetByName(planetName);
+      this.selection.selectPlanet(planetName);
+    });
+    
+    this.selection.setOnSelectionChange((planetName: string | null) => {
+      this.updatePlanetInfo(planetName);
     });
     
     this.setupEventListeners();
@@ -99,8 +106,8 @@ class App {
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
-    // Only detect planet intersections when not actively using camera controls
-    if (!this.isUsingControls()) {
+    // Only detect planet intersections when not actively using camera controls and nothing is selected
+    if (!this.isUsingControls() && !this.selection.getSelectedPlanet()) {
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const intersects = this.raycaster.intersectObjects(
         [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
@@ -125,11 +132,40 @@ class App {
         document.body.style.cursor = 'default';
         this.updatePlanetInfo(null);
       }
+    } else if (!this.isUsingControls()) {
+      // Show pointer cursor when hovering over planets even when something is selected
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const intersects = this.raycaster.intersectObjects(
+        [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
+      );
+      document.body.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
     }
   }
 
-  private onMouseClick(_event: MouseEvent): void {
-    // Click handling removed - only labels can focus on planets
+  private onMouseClick(event: MouseEvent): void {
+    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const intersects = this.raycaster.intersectObjects(
+      [...this.solarSystem.getPlanetMeshes(), this.solarSystem.getSun()]
+    );
+    
+    if (intersects.length > 0) {
+      const intersectedMesh = intersects[0].object;
+      
+      if (intersectedMesh === this.solarSystem.getSun()) {
+        this.selection.selectPlanet('Sun');
+      } else {
+        const planet = this.solarSystem.getPlanetByMesh(intersectedMesh);
+        if (planet) {
+          this.selection.selectPlanet(planet.name);
+        }
+      }
+    } else {
+      // Clicked empty space - clear selection
+      this.selection.clearSelection();
+    }
   }
 
   private focusOnPlanet(planet: any): void {
@@ -164,7 +200,7 @@ class App {
     if (planetName === 'Sun') {
       const sunData = this.solarSystem.getSunData();
       infoElement.innerHTML = `
-        <strong>${sunData.name}</strong><br>
+        <strong>${sunData.name}</strong> <span style="color: #00ff00;">●</span><br>
         Radius: ${sunData.radius.toLocaleString()} km<br>
         Mass: ${sunData.mass.toExponential(2)} kg<br>
         Surface Temperature: ${sunData.temperature.surface.toLocaleString()}°C<br>
@@ -175,7 +211,7 @@ class App {
       const planet = this.solarSystem.getPlanetData(planetName);
       if (planet) {
         infoElement.innerHTML = `
-          <strong>${planet.name}</strong><br>
+          <strong>${planet.name}</strong> <span style="color: #00ff00;">●</span><br>
           Radius: ${planet.radius.toLocaleString()} km<br>
           Mass: ${planet.mass.toExponential(2)} kg<br>
           Orbital Period: ${planet.orbitalPeriod.toFixed(1)} days<br>
@@ -185,7 +221,7 @@ class App {
         `;
       }
     } else {
-      infoElement.textContent = 'Hover over a planet or the Sun for information';
+      infoElement.textContent = 'Click on a planet or the Sun for information';
     }
   }
 
@@ -200,6 +236,7 @@ class App {
     this.spaceMouseController.update();
     this.solarSystem.update(delta);
     this.labels.update();
+    this.selection.update();
     
     this.renderer.render(this.scene, this.camera);
   }
