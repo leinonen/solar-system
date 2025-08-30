@@ -127,21 +127,10 @@ export class Labels {
         // Progressive scaling based on distance
         let scaleFactor = 1;
         
-        if (distance < 10) {
-          // Very close: scale down significantly to keep label small
-          scaleFactor = 0.15 + (0.15 * (distance / 10));
-        } else if (distance < 30) {
-          // Close: moderate scaling
-          scaleFactor = 0.3 + (0.4 * ((distance - 10) / 20));
-        } else if (distance < 100) {
-          // Medium distance: normal scaling
-          scaleFactor = 0.7 + (0.3 * ((distance - 30) / 70));
-        } else {
-          // Far: slightly larger but capped
-          scaleFactor = Math.min(1.2, 1 + (0.2 * ((distance - 100) / 400)));
-        }
+        // Inverse scaling - labels get smaller as you get closer
+        scaleFactor = Math.max(0.02, Math.min(1.0, distance / 20));
         
-        const baseScale = name === 'Sun' ? 10 : 6;
+        const baseScale = name === 'Sun' ? 4 : 2.5;
         const aspect = sprite.scale.x / sprite.scale.y;
         sprite.scale.set(aspect * baseScale * scaleFactor, baseScale * scaleFactor, 1);
         
