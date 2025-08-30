@@ -3,6 +3,7 @@ interface AppInterface {
   setShowLabels(show: boolean): void;
   setPlanetScale(scale: number): void;
   setRealisticScale(realistic: boolean): void;
+  setShowStarField(show: boolean): void;
 }
 
 import { SolarSystem } from '../scene/SolarSystem';
@@ -16,6 +17,7 @@ export class Settings {
   private showLabelsCheckbox: HTMLInputElement | null;
   private planetScaleSlider: HTMLInputElement | null;
   private realisticScaleCheckbox: HTMLInputElement | null;
+  private showStarFieldCheckbox: HTMLInputElement | null;
   private isOpen: boolean = false;
 
   constructor(solarSystem: SolarSystem, app: AppInterface) {
@@ -31,6 +33,7 @@ export class Settings {
     this.showLabelsCheckbox = document.getElementById('show-labels') as HTMLInputElement;
     this.planetScaleSlider = document.getElementById('planet-scale') as HTMLInputElement;
     this.realisticScaleCheckbox = document.getElementById('realistic-scale') as HTMLInputElement;
+    this.showStarFieldCheckbox = document.getElementById('show-starfield') as HTMLInputElement;
 
     if (this.settingsToggle && this.settingsContent) {
       this.settingsToggle.addEventListener('click', this.toggleSettings.bind(this));
@@ -67,6 +70,13 @@ export class Settings {
         if (this.planetScaleSlider) {
           this.planetScaleSlider.disabled = target.checked;
         }
+      });
+    }
+
+    if (this.showStarFieldCheckbox) {
+      this.showStarFieldCheckbox.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.app.setShowStarField(target.checked);
       });
     }
   }

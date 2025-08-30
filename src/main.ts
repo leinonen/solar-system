@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { SolarSystem } from './scene/SolarSystem';
-import { StarField } from './scene/StarField';
 import { Skybox } from './scene/Skybox';
 import { FallbackControls } from './controls/FallbackControls';
 import { SpaceMouseController } from './controls/SpaceMouseController';
@@ -13,7 +12,6 @@ class App {
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
   private solarSystem: SolarSystem;
-  private starField: StarField;
   private skybox: Skybox;
   private controls: FallbackControls;
   private spaceMouseController: SpaceMouseController;
@@ -35,7 +33,6 @@ class App {
     this.setupLights();
     
     this.solarSystem = new SolarSystem(this.scene);
-    this.starField = new StarField(this.scene);
     this.skybox = new Skybox(this.scene);
     
     this.controls = new FallbackControls(this.camera, this.renderer.domElement);
@@ -187,6 +184,10 @@ class App {
 
   public setRealisticScale(realistic: boolean): void {
     this.solarSystem.setRealisticScale(realistic);
+  }
+
+  public setShowStarField(show: boolean): void {
+    this.skybox.setStarFieldMode(show);
   }
 }
 
