@@ -4,6 +4,8 @@ export class TimeControls {
   private solarSystem: SolarSystem;
   private isPaused: boolean = false;
   private timeScale: number = 1;
+  private readonly SLOWEST_PLANET_PERIOD = 60195; // Neptune's orbital period in days
+  private readonly TARGET_MAX_PERIOD = 60; // 1 minute for slowest planet at max slider
   private playPauseBtn: HTMLElement | null;
   private timeSpeedSlider: HTMLInputElement | null;
   private timeDisplay: HTMLElement | null;
@@ -53,15 +55,26 @@ export class TimeControls {
     const slider = event.target as HTMLInputElement;
     const value = parseFloat(slider.value);
     
-    if (value === 0) {
+    if (value === 1) {
       this.timeScale = 1;
       this.updateTimeDisplay('Real Time');
-    } else if (value > 0) {
-      this.timeScale = Math.pow(10, value / 20);
-      this.updateTimeDisplay(`${this.timeScale.toFixed(1)}x faster`);
     } else {
-      this.timeScale = -Math.pow(10, -value / 20);
-      this.updateTimeDisplay(`${Math.abs(this.timeScale).toFixed(1)}x reverse`);
+      // Exponential scaling for fine control at low speeds (good for moon observation)
+      // Neptune period: 60195 days, target: 60 seconds for one lap at max slider
+      const maxScale = (this.SLOWEST_PLANET_PERIOD * 24 * 3600) / (1000 * this.TARGET_MAX_PERIOD);
+      // Exponential curve: 1 to maxScale, with fine control at the beginning
+      const normalizedValue = (value - 1) / 99; // 0 to 1
+      this.timeScale = 1 + (maxScale - 1) * Math.pow(normalizedValue, 2.5);
+      
+      if (this.timeScale < 60) {
+        this.updateTimeDisplay(`${this.timeScale.toFixed(2)}x faster`);
+      } else if (this.timeScale < 1440) {
+        const daysPerSecond = this.timeScale / 86400;
+        this.updateTimeDisplay(`${daysPerSecond.toFixed(3)} days/sec`);
+      } else {
+        const daysPerSecond = this.timeScale / 86400;
+        this.updateTimeDisplay(`${daysPerSecond.toFixed(2)} days/sec`);
+      }
     }
     
     if (!this.isPaused) {
