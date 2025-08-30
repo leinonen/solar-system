@@ -29,8 +29,20 @@ export class StarField {
         void main() {
           vec3 normalizedPos = normalize(vPosition);
           
-          // Milky Way-like gradient (single purple band)
-          float band = normalizedPos.y;
+          // Rotate coordinates to align with celestial equator (23.4° tilt from ecliptic)
+          // Rotation around X-axis by -23.4° to match celestial coordinate system
+          float angle = -0.40840704; // -23.4 degrees in radians
+          float cosAngle = cos(angle);
+          float sinAngle = sin(angle);
+          
+          // Apply rotation matrix around X-axis
+          vec3 rotatedPos;
+          rotatedPos.x = normalizedPos.x;
+          rotatedPos.y = normalizedPos.y * cosAngle - normalizedPos.z * sinAngle;
+          rotatedPos.z = normalizedPos.y * sinAngle + normalizedPos.z * cosAngle;
+          
+          // Use rotated Y coordinate for celestial equator band
+          float band = rotatedPos.y;
           float milkyWayBand = smoothstep(-0.3, 0.0, band) * smoothstep(0.3, 0.0, band);
           
           vec3 black = vec3(0.0, 0.0, 0.0);
