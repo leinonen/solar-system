@@ -612,6 +612,12 @@ export class SolarSystem {
     }
   }
 
+  public setShowMoons(show: boolean): void {
+    this.planets.forEach(planet => {
+      planet.setShowMoons(show);
+    });
+  }
+
   private createCoordinateSystem(): void {
     this.coordinateSystem = new THREE.Group();
     this.coordinateSystem.visible = this.showCoordinateSystem;

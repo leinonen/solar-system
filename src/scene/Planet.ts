@@ -440,6 +440,12 @@ export class Planet {
     this.equatorPlane.visible = show;
   }
 
+  public setShowMoons(show: boolean): void {
+    this.moons.forEach(moon => {
+      moon.visible = show;
+    });
+  }
+
   private calculateOrbitAngleForDate(julianDay: number): number {
     // Calculate mean longitude at epoch for this planet
     // Using simplified orbital elements - in reality you'd use proper ephemeris data

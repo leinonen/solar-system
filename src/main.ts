@@ -255,6 +255,9 @@ class App {
     this.labels.setVisible(show);
   }
 
+  public setShowMoons(show: boolean): void {
+    this.solarSystem.setShowMoons(show);
+  }
 
   public setShowMilkyWay(show: boolean): void {
     this.skybox.setStarFieldMode(!show);
