@@ -236,8 +236,10 @@ export function getScaledMoonOrbitRadius(radiusAU: number, planetName: string): 
     // Earth radius = 1 unit, so minimum orbit = 1.5 units
     return Math.max(1.5, realisticRadius);
   } else if (planetName === 'Mars') {
-    // Mars radius ≈ 0.53 units, ensure moons orbit outside
-    return Math.max(0.8, realisticRadius);
+    // Mars radius ≈ 0.53 units, scale moons proportionally but ensure they're outside the planet
+    // Phobos and Deimos are very close to Mars, so we need to scale them up for visibility
+    const scaledRadius = realisticRadius * 1000; // Scale up by 1000 for visibility
+    return Math.max(0.8, scaledRadius);
   } else if (planetName === 'Jupiter') {
     // Jupiter radius ≈ 11 units, moons should be outside
     return Math.max(12, realisticRadius);
