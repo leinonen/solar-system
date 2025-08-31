@@ -203,8 +203,10 @@ export class SolarSystem {
   }
 
   public update(delta: number): void {
-    // Update sun rotation
-    this.sun.rotation.y += delta * 0.1;
+    // Update sun rotation based on realistic rotation period and time scale
+    // Sun rotates once every 24.47 days at the equator
+    const sunRotationRate = (2 * Math.PI) / (SUN_DATA.rotationPeriod * 24 * 3600); // radians per second
+    this.sun.rotation.y += delta * this.timeScale * sunRotationRate;
     
     // Update time
     this.currentTime += delta * this.timeScale;

@@ -8,6 +8,7 @@ export const SUN_DATA = {
   name: 'Sun',
   radius: 696340, // km
   mass: 1.989e30, // kg
+  rotationPeriod: 24.47, // days (sidereal rotation at equator)
   temperature: {
     surface: 5778, // K
     core: 15000000 // K
