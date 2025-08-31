@@ -38,18 +38,18 @@ export class Labels {
 
   private createLabels(): void {
     const sunLabel = this.createLabelSprite('Sun', '#ffff00');
-    sunLabel.position.set(0, 8, 0);
+    sunLabel.position.set(0, 12, 0);
     this.solarSystem.getSun().add(sunLabel);
     this.labels.set('Sun', sunLabel);
     
     // Create Sun label line
-    const sunLabelLine = this.createLabelLine('Sun', 8);
+    const sunLabelLine = this.createLabelLine('Sun', 12);
     this.solarSystem.getSun().add(sunLabelLine);
     this.labelLines.set('Sun', sunLabelLine);
     
     this.solarSystem.getPlanets().forEach(planet => {
       const label = this.createLabelSprite(planet.name);
-      const yOffset = Math.max(planet.radius * 1.5 + 2, 4);
+      const yOffset = Math.max(planet.radius * 2 + 4, 6);
       label.position.set(0, yOffset, 0);
       planet.getGroup().add(label);
       this.labels.set(planet.name, label);
@@ -68,7 +68,7 @@ export class Labels {
           
           // Position moon label further above the moon for better visibility
           const moonRadius = moonMesh.geometry.parameters.radius;
-          const yOffset = Math.max(moonRadius * 4 + 2, 3);
+          const yOffset = Math.max(moonRadius * 6 + 3, 5);
           moonLabel.position.set(0, yOffset, 0);
           
           moonMesh.add(moonLabel);
