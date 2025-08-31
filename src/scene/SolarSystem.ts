@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Planet } from './Planet';
+import { AsteroidBelt } from './AsteroidBelt';
 import { PLANETS, SUN_DATA, getScaledRadius, getScaledOrbitRadius } from '../data/PlanetData';
 import { PlanetData } from '../types/planet';
 
@@ -8,6 +9,7 @@ export class SolarSystem {
   private sun!: THREE.Mesh;
   private sunLight!: THREE.PointLight;
   private planets: Planet[] = [];
+  private asteroidBelt!: AsteroidBelt;
   private orbits: THREE.Line[] = [];
   private showOrbits: boolean = true;
   private orbitMode: 'static' | 'trails' = 'static';
@@ -30,6 +32,7 @@ export class SolarSystem {
     this.scene = scene;
     this.createSun();
     this.createPlanets();
+    this.createAsteroidBelt();
     this.createOrbits();
     this.createDistanceLabels();
     this.createCoordinateSystem();
@@ -118,6 +121,12 @@ export class SolarSystem {
       const planet = new Planet(planetData, this.scene, this.planetScale);
       this.planets.push(planet);
     });
+  }
+
+  private createAsteroidBelt(): void {
+    this.asteroidBelt = new AsteroidBelt(this.scene, 2000);
+    // Disabled by default as requested
+    this.asteroidBelt.setVisible(false);
   }
 
   private createOrbits(): void {
@@ -215,6 +224,11 @@ export class SolarSystem {
     this.planets.forEach((planet) => {
       planet.update(delta, this.currentTime);
     });
+
+    // Update asteroid belt
+    if (this.asteroidBelt) {
+      this.asteroidBelt.update(delta, this.timeScale);
+    }
     
     // Update orbit trails if in trail mode
     if (this.showOrbits && this.orbitMode === 'trails') {
@@ -589,6 +603,11 @@ export class SolarSystem {
     
     // Update sun shadow receiving
     this.sun.receiveShadow = enable;
+    
+    // Update asteroid belt shadow casting/receiving
+    if (this.asteroidBelt) {
+      this.asteroidBelt.setEnableShadows(enable);
+    }
   }
 
   public setShowEarthAxis(show: boolean): void {
@@ -616,6 +635,12 @@ export class SolarSystem {
     this.planets.forEach(planet => {
       planet.setShowMoons(show);
     });
+  }
+
+  public setShowAsteroidBelt(show: boolean): void {
+    if (this.asteroidBelt) {
+      this.asteroidBelt.setVisible(show);
+    }
   }
 
   private createCoordinateSystem(): void {

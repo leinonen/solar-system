@@ -259,6 +259,10 @@ class App {
     this.solarSystem.setShowMoons(show);
   }
 
+  public setShowAsteroidBelt(show: boolean): void {
+    this.solarSystem.setShowAsteroidBelt(show);
+  }
+
   public setShowMilkyWay(show: boolean): void {
     this.skybox.setStarFieldMode(!show);
   }
