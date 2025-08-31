@@ -252,6 +252,10 @@ export class Planet {
     return this.group.position.clone();
   }
 
+  public getPlanetData(): PlanetData {
+    return this.planetData;
+  }
+
   public setReferenceDate(julianDay: number): void {
     this.referenceJD = julianDay;
     this.initialOrbitAngle = this.calculateOrbitAngleForDate(julianDay);

@@ -13,7 +13,11 @@ export class SolarSystem {
   private orbitMode: 'static' | 'trails' = 'static';
   private showDistanceLabels: boolean = false;
   private showCoordinateSystem: boolean = false;
+  private showEquinoxMarkers: boolean = false;
   private coordinateSystem: THREE.Group = new THREE.Group();
+  private equinoxMarkers: THREE.Group = new THREE.Group();
+  private earthSeasonIndicator?: THREE.Group;
+  private lastEarthAngle: number = -1;
   private distanceLabels: THREE.Sprite[] = [];
   private distanceLines: THREE.Line[] = [];
   private timeScale: number = 1;
@@ -219,6 +223,9 @@ export class SolarSystem {
     if (this.showOrbits && this.orbitMode === 'static' && this.camera) {
       this.updateStaticOrbitShading();
     }
+    
+    // Update Earth season indicator
+    // this.updateEarthSeasonIndicator(); // Temporarily disabled for performance
   }
   
   private updateStaticOrbitShading(): void {
@@ -559,6 +566,14 @@ export class SolarSystem {
   public setShowCoordinateSystem(show: boolean): void {
     this.showCoordinateSystem = show;
     this.coordinateSystem.visible = show;
+    if (this.earthSeasonIndicator) {
+      this.earthSeasonIndicator.visible = show;
+    }
+  }
+
+  public setShowEquinoxMarkers(show: boolean): void {
+    this.showEquinoxMarkers = show;
+    this.equinoxMarkers.visible = show;
   }
 
   public setEnableShadows(enable: boolean): void {
@@ -588,10 +603,18 @@ export class SolarSystem {
     this.createCoordinateAxes();
     
     this.scene.add(this.coordinateSystem);
+    
+    // Create equinox and solstice markers as separate system
+    this.createEquinoxSolsticeMarkers();
+    this.equinoxMarkers.visible = this.showEquinoxMarkers;
+    this.scene.add(this.equinoxMarkers);
+    
+    // Create Earth position and season indicator
+    // this.createEarthSeasonIndicator(); // Temporarily disabled for performance
   }
 
   private createEclipticPlane(): void {
-    // Create a grid representing the ecliptic plane (Earth's orbital plane)
+    // Create a grid representing the ecliptic plane (full solar system scale)
     const gridSize = 600; // Large enough to show outer planets
     const divisions = 24; // 24 divisions for 15° increments
     
@@ -611,7 +634,7 @@ export class SolarSystem {
     }
     
     // Latitude circles (concentric circles)
-    const radiusSteps = [50, 100, 200, 300, 400, 500, 600];
+    const radiusSteps = [50, 100, 150, 200, 300, 400, 500, 600];
     radiusSteps.forEach(radius => {
       const segments = 64;
       for (let i = 0; i < segments; i++) {
@@ -637,15 +660,16 @@ export class SolarSystem {
     this.coordinateSystem.add(eclipticGrid);
     
     // Add ecliptic plane label
-    this.addPlaneLabel('Ecliptic Plane\\n(Solar System)', new THREE.Vector3(400, 5, 0), 0x444466);
+    this.addPlaneLabel('Ecliptic Plane\n(Solar System)', new THREE.Vector3(400, 5, 0), 0x444466);
   }
 
   private createCelestialEquator(): void {
     // Create celestial equator (inclined 23.4° to ecliptic)
-    const radius = 500;
+    const radius = 500; // Large scale to match solar system
     const segments = 200;
-    const points = [];
     
+    // Create a simple continuous line for the celestial equator
+    const points = [];
     for (let i = 0; i <= segments; i++) {
       const angle = (i / segments) * Math.PI * 2;
       const x = Math.cos(angle) * radius;
@@ -654,21 +678,40 @@ export class SolarSystem {
     }
     
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({
-      color: 0x66aa44,
+    
+    // Use LineDashedMaterial for efficient dashed line rendering
+    const material = new THREE.LineDashedMaterial({
+      color: 0x66dd88,
       transparent: true,
-      opacity: 0.6,
-      linewidth: 2
+      opacity: 0.8,
+      linewidth: 3,
+      dashSize: 10,
+      gapSize: 5,
     });
     
     const celestialEquator = new THREE.Line(geometry, material);
+    celestialEquator.computeLineDistances(); // Required for dashed lines
+    
     // Apply 23.4° inclination to ecliptic
     celestialEquator.rotation.x = THREE.MathUtils.degToRad(23.4);
     
     this.coordinateSystem.add(celestialEquator);
     
+    // Add a subtle plane to show the celestial equator plane
+    const planeGeometry = new THREE.RingGeometry(480, 500, 64);
+    const planeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x66aa44,
+      transparent: true,
+      opacity: 0.1,
+      side: THREE.DoubleSide
+    });
+    const celestialPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+    celestialPlane.rotation.x = THREE.MathUtils.degToRad(23.4);
+    this.coordinateSystem.add(celestialPlane);
+    
+    
     // Add celestial equator label
-    this.addPlaneLabel('Celestial Equator\\n(Earth Equator)', new THREE.Vector3(350, 50, 0), 0x66aa44);
+    this.addPlaneLabel('Celestial Equator\n(Earth Equator)', new THREE.Vector3(350, 50, 0), 0x66aa44);
   }
 
   private createCoordinateAxes(): void {
@@ -697,7 +740,7 @@ export class SolarSystem {
     this.coordinateSystem.add(yAxis);
     
     // Add axis labels
-    this.addAxisLabel('Vernal Equinox\\n(0° Ecliptic Longitude)', new THREE.Vector3(axisLength + 20, 0, 0), 0xff4444);
+    this.addAxisLabel('Vernal Equinox\n(0° Ecliptic Longitude)', new THREE.Vector3(axisLength + 20, 0, 0), 0xff4444);
     this.addAxisLabel('90° Ecliptic Longitude', new THREE.Vector3(0, 0, axisLength + 20), 0x4444ff);
     this.addAxisLabel('North Ecliptic Pole', new THREE.Vector3(0, 200 + 20, 0), 0x44ff44);
   }
@@ -705,22 +748,22 @@ export class SolarSystem {
   private addPlaneLabel(text: string, position: THREE.Vector3, color: number): void {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d')!;
-    canvas.width = 256;
-    canvas.height = 64;
+    canvas.width = 200; // Smaller canvas
+    canvas.height = 48;  // Smaller height
     
     context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
-    context.font = 'bold 16px Arial';
+    context.font = 'bold 12px Arial'; // Smaller font
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     
     // Handle multi-line text
-    const lines = text.split('\\n');
+    const lines = text.split('\n');
     if (lines.length > 1) {
       lines.forEach((line, index) => {
-        context.fillText(line, 128, 20 + index * 24);
+        context.fillText(line, 100, 16 + index * 16); // Tighter spacing
       });
     } else {
-      context.fillText(text, 128, 32);
+      context.fillText(text, 100, 24);
     }
     
     const texture = new THREE.CanvasTexture(canvas);
@@ -731,7 +774,7 @@ export class SolarSystem {
     });
     
     const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(40, 10, 1);
+    sprite.scale.set(25, 6, 1); // Smaller sprite scale
     sprite.position.copy(position);
     
     this.coordinateSystem.add(sprite);
@@ -740,22 +783,22 @@ export class SolarSystem {
   private addAxisLabel(text: string, position: THREE.Vector3, color: number): void {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d')!;
-    canvas.width = 200;
-    canvas.height = 50;
+    canvas.width = 160; // Smaller
+    canvas.height = 40;  // Smaller
     
     context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
-    context.font = 'bold 14px Arial';
+    context.font = 'bold 11px Arial'; // Smaller font
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     
     // Handle multi-line text
-    const lines = text.split('\\n');
+    const lines = text.split('\n');
     if (lines.length > 1) {
       lines.forEach((line, index) => {
-        context.fillText(line, 100, 15 + index * 20);
+        context.fillText(line, 80, 12 + index * 16); // Tighter spacing
       });
     } else {
-      context.fillText(text, 100, 25);
+      context.fillText(text, 80, 20);
     }
     
     const texture = new THREE.CanvasTexture(canvas);
@@ -766,10 +809,316 @@ export class SolarSystem {
     });
     
     const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(30, 7.5, 1);
+    sprite.scale.set(20, 5, 1); // Smaller sprite scale
     sprite.position.copy(position);
     
     this.coordinateSystem.add(sprite);
+  }
+
+  private addEquinoxLabel(text: string, position: THREE.Vector3, color: number): void {
+    const sprite = this.createEquinoxLabelSprite(text, color);
+    sprite.position.copy(position);
+    this.equinoxMarkers.add(sprite);
+  }
+
+  private createEquinoxLabelSprite(text: string, color: number): THREE.Sprite {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    canvas.width = 120; // Very small
+    canvas.height = 32;
+    
+    context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+    context.font = 'bold 10px Arial'; // Very small font
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    
+    // Handle multi-line text
+    const lines = text.split('\n');
+    if (lines.length > 1) {
+      lines.forEach((line, index) => {
+        context.fillText(line, 60, 10 + index * 12);
+      });
+    } else {
+      context.fillText(text, 60, 16);
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+    });
+    
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(12, 3, 1); // Very small sprite scale
+    
+    return sprite;
+  }
+
+  private createEquinoxSolsticeMarkers(): void {
+    const radius = 30; // Earth's orbital radius
+    const earthSize = 1; // Earth's scaled radius from getScaledRadius
+    
+    // Vernal Equinox (0°) - where celestial equator crosses ecliptic going north
+    const vernalSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(earthSize, 16, 16), // Same size as Earth
+      new THREE.MeshBasicMaterial({ color: 0xffdd00, transparent: true, opacity: 0.9 })
+    );
+    vernalSphere.position.set(radius, 0, 0);
+    this.equinoxMarkers.add(vernalSphere);
+    
+    // Autumnal Equinox (180°) - where celestial equator crosses ecliptic going south
+    const autumnalSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(earthSize, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.9 })
+    );
+    autumnalSphere.position.set(-radius, 0, 0);
+    this.equinoxMarkers.add(autumnalSphere);
+    
+    // Summer Solstice (90°) - Sun at maximum northern declination
+    const summerSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(earthSize, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0xff6666, transparent: true, opacity: 0.9 })
+    );
+    summerSphere.position.set(0, 0, radius);
+    this.equinoxMarkers.add(summerSphere);
+    
+    // Winter Solstice (270°) - Sun at maximum southern declination
+    const winterSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(earthSize, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0x6666ff, transparent: true, opacity: 0.9 })
+    );
+    winterSphere.position.set(0, 0, -radius);
+    this.equinoxMarkers.add(winterSphere);
+    
+    // Add Y-axis showing north/south celestial poles (perpendicular to celestial equator)
+    const yAxisLength = 25; // Shorter than orbital radius
+    const celestialPoleGroup = new THREE.Group();
+    
+    // Create the axis line
+    const yGeometry = new THREE.BufferGeometry();
+    yGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, -yAxisLength, 0, 0, yAxisLength, 0], 3));
+    const yMaterial = new THREE.LineBasicMaterial({ color: 0xff8844, linewidth: 2, transparent: true, opacity: 0.8 }); // Orange color to distinguish from ecliptic pole
+    const yAxis = new THREE.Line(yGeometry, yMaterial);
+    celestialPoleGroup.add(yAxis);
+    
+    // Add labels at the endpoints (before rotation)
+    const northPoleLabel = this.createEquinoxLabelSprite('N. Celestial\nPole', 0xff8844);
+    northPoleLabel.position.set(1, yAxisLength + 1, 0);
+    celestialPoleGroup.add(northPoleLabel);
+    
+    const southPoleLabel = this.createEquinoxLabelSprite('S. Celestial\nPole', 0xff8844);
+    southPoleLabel.position.set(1, -yAxisLength - 1, 0);
+    celestialPoleGroup.add(southPoleLabel);
+    
+    // Rotate the entire group by 23.4° to align with celestial equator
+    celestialPoleGroup.rotation.x = THREE.MathUtils.degToRad(23.4);
+    this.equinoxMarkers.add(celestialPoleGroup);
+    
+    // Add Z-axis between summer and winter solstices (solstice line)
+    const zGeometry = new THREE.BufferGeometry();
+    zGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, -radius, 0, 0, radius], 3));
+    const zMaterial = new THREE.LineBasicMaterial({ color: 0x8888ff, linewidth: 2, transparent: true, opacity: 0.8 });
+    const zAxis = new THREE.Line(zGeometry, zMaterial);
+    this.equinoxMarkers.add(zAxis);
+    
+    // Add angle indicator showing 23.4° tilt between ecliptic pole and celestial pole
+    const angleRadius = 12;
+    const angleSegments = 25;
+    const anglePoints = [];
+    
+    // Create arc showing the angle from vertical (ecliptic pole) to celestial pole
+    for (let i = 0; i <= angleSegments; i++) {
+      const angle = (i / angleSegments) * THREE.MathUtils.degToRad(23.4);
+      const y = Math.cos(angle) * angleRadius; // Start from vertical
+      const z = Math.sin(angle) * angleRadius; // Move toward celestial pole direction
+      anglePoints.push(new THREE.Vector3(0, y, z));
+    }
+    
+    const angleArcGeometry = new THREE.BufferGeometry().setFromPoints(anglePoints);
+    const angleArcMaterial = new THREE.LineBasicMaterial({
+      color: 0xffaa00,
+      transparent: true,
+      opacity: 0.9,
+      linewidth: 3
+    });
+    
+    const angleArc = new THREE.Line(angleArcGeometry, angleArcMaterial);
+    this.equinoxMarkers.add(angleArc);
+    
+    // Add reference line showing ecliptic pole (straight up)
+    const eclipticPoleGeometry = new THREE.BufferGeometry();
+    eclipticPoleGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, angleRadius, 0], 3));
+    const eclipticPoleMaterial = new THREE.LineBasicMaterial({ 
+      color: 0x888888, 
+      linewidth: 1, 
+      transparent: true, 
+      opacity: 0.6,
+      lineDashed: true,
+      dashSize: 2,
+      gapSize: 1
+    });
+    const eclipticPoleLine = new THREE.Line(eclipticPoleGeometry, eclipticPoleMaterial);
+    eclipticPoleLine.computeLineDistances(); // Required for dashed lines
+    this.equinoxMarkers.add(eclipticPoleLine);
+    
+    // Add smaller labels positioned closer to markers
+    this.addEquinoxLabel('Vernal\nEquinox', new THREE.Vector3(radius + 3, 3, 0), 0xffdd00);
+    this.addEquinoxLabel('Autumnal\nEquinox', new THREE.Vector3(-radius - 3, 3, 0), 0xffaa00);
+    this.addEquinoxLabel('Summer\nSolstice', new THREE.Vector3(3, 3, radius + 3), 0xff6666);
+    this.addEquinoxLabel('Winter\nSolstice', new THREE.Vector3(3, 3, -radius - 3), 0x6666ff);
+    
+    // Add solstice axis label (closer)
+    this.addEquinoxLabel('Solstice\nAxis', new THREE.Vector3(0, 5, 0), 0x8888ff);
+    
+    // Add angle label (closer)
+    this.addEquinoxLabel('23.4°\nTilt', new THREE.Vector3(3, angleRadius - 3, 2), 0xffaa00);
+    
+    // Intersection line showing where celestial equator meets ecliptic
+    const intersectionGeometry = new THREE.BufferGeometry();
+    const intersectionPoints = [
+      new THREE.Vector3(-radius, 0, 0),
+      new THREE.Vector3(radius, 0, 0)
+    ];
+    intersectionGeometry.setFromPoints(intersectionPoints);
+    
+    const intersectionMaterial = new THREE.LineBasicMaterial({
+      color: 0xffff00,
+      transparent: true,
+      opacity: 0.8,
+      linewidth: 3
+    });
+    
+    const intersectionLine = new THREE.Line(intersectionGeometry, intersectionMaterial);
+    this.equinoxMarkers.add(intersectionLine);
+  }
+
+  private createEarthSeasonIndicator(): void {
+    this.earthSeasonIndicator = new THREE.Group();
+    
+    // Create a visual indicator for Earth's position
+    const indicatorGeometry = new THREE.ConeGeometry(15, 30, 8);
+    const indicatorMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x00ff00,
+      transparent: true,
+      opacity: 0.8
+    });
+    const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+    indicator.rotation.x = Math.PI / 2; // Point downward
+    indicator.position.y = 40; // Above Earth's orbit
+    
+    this.earthSeasonIndicator.add(indicator);
+    
+    // Add season label sprite
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    canvas.width = 256;
+    canvas.height = 64;
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+    });
+    
+    const seasonLabel = new THREE.Sprite(spriteMaterial);
+    seasonLabel.scale.set(40, 10, 1);
+    seasonLabel.position.y = 60;
+    seasonLabel.userData = { canvas, context };
+    
+    this.earthSeasonIndicator.add(seasonLabel);
+    this.earthSeasonIndicator.visible = this.showCoordinateSystem;
+    
+    this.scene.add(this.earthSeasonIndicator);
+  }
+
+  private updateEarthSeasonIndicator(): void {
+    if (!this.earthSeasonIndicator || !this.showCoordinateSystem) return;
+    
+    // Find Earth
+    const earth = this.planets.find(p => p.getPlanetData().name === 'Earth');
+    if (!earth) return;
+    
+    // Get Earth's current position
+    const earthPos = earth.getPosition();
+    
+    // Update indicator position to follow Earth (this is cheap)
+    this.earthSeasonIndicator.position.x = earthPos.x;
+    this.earthSeasonIndicator.position.z = earthPos.z;
+    
+    // Calculate Earth's angle in its orbit (0° at vernal equinox)
+    const angle = Math.atan2(earthPos.z, earthPos.x);
+    let degrees = THREE.MathUtils.radToDeg(angle);
+    if (degrees < 0) degrees += 360;
+    
+    // Only update the expensive canvas rendering if angle changed significantly
+    const angleDiff = Math.abs(degrees - this.lastEarthAngle);
+    if (angleDiff < 5 && this.lastEarthAngle !== -1) return; // Update only every 5 degrees
+    
+    this.lastEarthAngle = degrees;
+    
+    // Determine current season based on Earth's position
+    let season = '';
+    let seasonColor = 0x00ff00;
+    
+    if (degrees >= 345 || degrees < 15) {
+      season = 'Near Vernal Equinox\nN. Hemisphere: Spring begins';
+      seasonColor = 0xffdd00;
+    } else if (degrees >= 15 && degrees < 75) {
+      season = 'N. Hemisphere: Spring\nS. Hemisphere: Autumn';
+      seasonColor = 0x88ff88;
+    } else if (degrees >= 75 && degrees < 105) {
+      season = 'Near Summer Solstice\nN. Hemisphere: Summer begins';
+      seasonColor = 0xff6666;
+    } else if (degrees >= 105 && degrees < 165) {
+      season = 'N. Hemisphere: Summer\nS. Hemisphere: Winter';
+      seasonColor = 0xffaa88;
+    } else if (degrees >= 165 && degrees < 195) {
+      season = 'Near Autumnal Equinox\nN. Hemisphere: Autumn begins';
+      seasonColor = 0xffaa00;
+    } else if (degrees >= 195 && degrees < 255) {
+      season = 'N. Hemisphere: Autumn\nS. Hemisphere: Spring';
+      seasonColor = 0xcc8844;
+    } else if (degrees >= 255 && degrees < 285) {
+      season = 'Near Winter Solstice\nN. Hemisphere: Winter begins';
+      seasonColor = 0x6666ff;
+    } else {
+      season = 'N. Hemisphere: Winter\nS. Hemisphere: Summer';
+      seasonColor = 0x8888ff;
+    }
+    
+    // Update indicator color
+    const indicator = this.earthSeasonIndicator.children[0] as THREE.Mesh;
+    if (indicator.material && 'color' in indicator.material) {
+      (indicator.material as THREE.MeshBasicMaterial).color.setHex(seasonColor);
+    }
+    
+    // Update season label
+    const seasonLabel = this.earthSeasonIndicator.children[1] as THREE.Sprite;
+    if (seasonLabel && seasonLabel.userData.canvas && seasonLabel.userData.context) {
+      const canvas = seasonLabel.userData.canvas;
+      const context = seasonLabel.userData.context;
+      
+      // Clear canvas
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw season text
+      context.fillStyle = `#${seasonColor.toString(16).padStart(6, '0')}`;
+      context.font = 'bold 14px Arial';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      
+      const lines = season.split('\n');
+      lines.forEach((line, index) => {
+        context.fillText(line, 128, 20 + index * 24);
+      });
+      
+      // Update texture
+      if (seasonLabel.material && 'map' in seasonLabel.material) {
+        (seasonLabel.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+      }
+    }
   }
 
   public setPlanetScale(scale: number): void {

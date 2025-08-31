@@ -268,6 +268,10 @@ class App {
     this.solarSystem.setShowCoordinateSystem(show);
   }
 
+  public setShowEquinoxMarkers(show: boolean): void {
+    this.solarSystem.setShowEquinoxMarkers(show);
+  }
+
   public setEnableShadows(enable: boolean): void {
     this.renderer.shadowMap.enabled = enable;
     this.solarSystem.setEnableShadows(enable);
