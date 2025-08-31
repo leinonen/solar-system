@@ -13,6 +13,15 @@ export class Planet {
   private currentScale: number;
   private orbitAngle: number = 0;
   private rotationAngle: number = 0;
+  private axis?: THREE.Line;
+  private northPole?: THREE.Mesh;
+  private southPole?: THREE.Mesh;
+  private equatorPlane?: THREE.Mesh;
+  private earthRotationGroup?: THREE.Group; // For Earth's tilted rotation
+  private showAxis: boolean = false;
+  private showPoles: boolean = false;
+  private showEquator: boolean = false;
+  private static readonly EARTH_AXIAL_TILT = THREE.MathUtils.degToRad(23.4397); // 23.5 degrees in radians
   private referenceJD: number = 2451545.0; // J2000.0 epoch
   private initialOrbitAngle: number = 0;
   public name: string;
@@ -32,6 +41,13 @@ export class Planet {
     this.createPlanet();
     this.createMoons();
     this.createRings();
+    
+    // Create Earth-specific features if this is Earth (after earthRotationGroup is created)
+    if (this.name === 'Earth') {
+      this.createEarthAxis();
+      this.createEarthPoles();
+      this.createEarthEquator();
+    }
     
     // Calculate initial position based on reference date
     this.initialOrbitAngle = this.calculateOrbitAngleForDate(this.referenceJD);
@@ -79,7 +95,16 @@ export class Planet {
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
     this.mesh.userData = { planet: this };
-    this.group.add(this.mesh);
+    
+    // For Earth, create a tilted rotation group
+    if (this.name === 'Earth') {
+      this.earthRotationGroup = new THREE.Group();
+      this.earthRotationGroup.rotation.z = -Planet.EARTH_AXIAL_TILT; // Apply tilt
+      this.earthRotationGroup.add(this.mesh);
+      this.group.add(this.earthRotationGroup);
+    } else {
+      this.group.add(this.mesh);
+    }
   }
 
   private createMoons(): void {
@@ -150,6 +175,97 @@ export class Planet {
     });
   }
 
+  private createEarthAxis(): void {
+    const radius = getScaledRadius(this.data.radius) * this.currentScale;
+    const axisLength = radius * 2.5;
+    
+    // Create a simple vertical axis - the tilt will be applied by the rotation group
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -axisLength, 0), // South pole end
+      new THREE.Vector3(0, axisLength, 0),  // North pole end
+    ]);
+    
+    const material = new THREE.LineBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.8,
+    });
+    
+    this.axis = new THREE.Line(geometry, material);
+    this.axis.visible = this.showAxis;
+    
+    // Add the axis to the same rotation group as Earth so it tilts together
+    if (this.earthRotationGroup) {
+      this.earthRotationGroup.add(this.axis);
+    } else {
+      this.group.add(this.axis);
+    }
+  }
+
+  private createEarthPoles(): void {
+    const radius = getScaledRadius(this.data.radius) * this.currentScale;
+    const poleRadius = radius * 0.1;
+    const poleDistance = radius * 1.1;
+    
+    const geometry = new THREE.SphereGeometry(poleRadius, 8, 8);
+    
+    // North Pole (red) - simple vertical position, will be tilted by rotation group
+    const northMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.9,
+    });
+    this.northPole = new THREE.Mesh(geometry, northMaterial);
+    this.northPole.position.set(0, poleDistance, 0);
+    this.northPole.visible = this.showPoles;
+    
+    // South Pole (blue) - simple vertical position, will be tilted by rotation group
+    const southMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0000ff,
+      transparent: true,
+      opacity: 0.9,
+    });
+    this.southPole = new THREE.Mesh(geometry.clone(), southMaterial);
+    this.southPole.position.set(0, -poleDistance, 0);
+    this.southPole.visible = this.showPoles;
+    
+    // Add poles to the rotation group so they tilt with Earth
+    if (this.earthRotationGroup) {
+      this.earthRotationGroup.add(this.northPole);
+      this.earthRotationGroup.add(this.southPole);
+    } else {
+      this.group.add(this.northPole);
+      this.group.add(this.southPole);
+    }
+  }
+
+  private createEarthEquator(): void {
+    const radius = getScaledRadius(this.data.radius) * this.currentScale;
+    const equatorRadius = radius * 1.05;
+    
+    const geometry = new THREE.RingGeometry(equatorRadius * 0.98, equatorRadius * 1.02, 64);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.6,
+    });
+    
+    this.equatorPlane = new THREE.Mesh(geometry, material);
+    
+    // Simple horizontal plane - the tilt will be applied by the rotation group
+    this.equatorPlane.rotation.x = Math.PI / 2; // Make it horizontal
+    
+    this.equatorPlane.visible = this.showEquator;
+    
+    // Add equator to the rotation group so it tilts with Earth
+    if (this.earthRotationGroup) {
+      this.earthRotationGroup.add(this.equatorPlane);
+    } else {
+      this.group.add(this.equatorPlane);
+    }
+  }
+
   public update(delta: number, time: number): void {
     // Update orbital position
     const orbitalSpeed = (2 * Math.PI) / (this.data.orbitalPeriod * 24 * 3600);
@@ -160,7 +276,14 @@ export class Planet {
     const rotationSpeed = (2 * Math.PI) / (Math.abs(this.data.rotationPeriod) * 3600);
     const rotationDirection = this.data.rotationPeriod < 0 ? -1 : 1;
     this.rotationAngle = time * rotationSpeed * rotationDirection * 1000;
-    this.mesh.rotation.y = this.rotationAngle;
+    
+    if (this.name === 'Earth' && this.earthRotationGroup) {
+      // Earth: rotate around Y-axis within the tilted group
+      this.mesh.rotation.y = this.rotationAngle;
+    } else {
+      // Other planets rotate around vertical Y-axis
+      this.mesh.rotation.y = this.rotationAngle;
+    }
     
     // Update moon orbits
     this.moons.forEach((moon, index) => {
@@ -229,6 +352,28 @@ export class Planet {
       this.rings.scale.setScalar(scale / this.baseScale);
     }
     
+    // Update Earth-specific features if this is Earth
+    if (this.name === 'Earth') {
+      const poleDistance = newRadius * 1.1;
+      
+      if (this.axis) {
+        this.axis.scale.setScalar(scale / this.baseScale);
+      }
+      if (this.northPole) {
+        this.northPole.scale.setScalar(scale / this.baseScale);
+        // Simple vertical position - tilt is handled by rotation group
+        this.northPole.position.set(0, poleDistance, 0);
+      }
+      if (this.southPole) {
+        this.southPole.scale.setScalar(scale / this.baseScale);
+        // Simple vertical position - tilt is handled by rotation group
+        this.southPole.position.set(0, -poleDistance, 0);
+      }
+      if (this.equatorPlane) {
+        this.equatorPlane.scale.setScalar(scale / this.baseScale);
+      }
+    }
+    
     this.radius = newRadius;
   }
 
@@ -253,7 +398,7 @@ export class Planet {
   }
 
   public getPlanetData(): PlanetData {
-    return this.planetData;
+    return this.data;
   }
 
   public setReferenceDate(julianDay: number): void {
@@ -277,6 +422,25 @@ export class Planet {
     if (this.rings) {
       this.rings.receiveShadow = enable;
     }
+  }
+
+  public setShowEarthAxis(show: boolean): void {
+    if (this.name !== 'Earth' || !this.axis) return;
+    this.showAxis = show;
+    this.axis.visible = show;
+  }
+
+  public setShowEarthPoles(show: boolean): void {
+    if (this.name !== 'Earth' || !this.northPole || !this.southPole) return;
+    this.showPoles = show;
+    this.northPole.visible = show;
+    this.southPole.visible = show;
+  }
+
+  public setShowEarthEquator(show: boolean): void {
+    if (this.name !== 'Earth' || !this.equatorPlane) return;
+    this.showEquator = show;
+    this.equatorPlane.visible = show;
   }
 
   private calculateOrbitAngleForDate(julianDay: number): number {

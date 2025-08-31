@@ -589,6 +589,27 @@ export class SolarSystem {
     this.sun.receiveShadow = enable;
   }
 
+  public setShowEarthAxis(show: boolean): void {
+    const earth = this.planets.find(p => p.name === 'Earth');
+    if (earth) {
+      earth.setShowEarthAxis(show);
+    }
+  }
+
+  public setShowEarthPoles(show: boolean): void {
+    const earth = this.planets.find(p => p.name === 'Earth');
+    if (earth) {
+      earth.setShowEarthPoles(show);
+    }
+  }
+
+  public setShowEarthEquator(show: boolean): void {
+    const earth = this.planets.find(p => p.name === 'Earth');
+    if (earth) {
+      earth.setShowEarthEquator(show);
+    }
+  }
+
   private createCoordinateSystem(): void {
     this.coordinateSystem = new THREE.Group();
     this.coordinateSystem.visible = this.showCoordinateSystem;
