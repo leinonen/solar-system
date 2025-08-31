@@ -241,11 +241,15 @@ export function getScaledMoonOrbitRadius(radiusAU: number, planetName: string): 
     const scaledRadius = realisticRadius * 1000; // Scale up by 1000 for visibility
     return Math.max(0.8, scaledRadius);
   } else if (planetName === 'Jupiter') {
-    // Jupiter radius ≈ 11 units, moons should be outside
-    return Math.max(12, realisticRadius);
+    // Jupiter radius ≈ 11 units, scale moons proportionally but ensure they're outside the planet
+    // Jupiter's moons are relatively close, so we need to scale them up for visibility and separation
+    const scaledRadius = realisticRadius * 150; // Scale up by 150 for visibility
+    return Math.max(12, scaledRadius);
   } else if (planetName === 'Saturn') {
-    // Saturn radius ≈ 9.4 units, moons should be outside  
-    return Math.max(10, realisticRadius);
+    // Saturn radius ≈ 9.1 units, scale moons proportionally but ensure they're outside the planet
+    // Saturn's moons need scaling up for visibility and separation
+    const scaledRadius = realisticRadius * 200; // Scale up by 200 for visibility
+    return Math.max(10, scaledRadius);
   } else {
     // For other planets, use minimum safe distance
     return Math.max(1.0, realisticRadius);
