@@ -386,6 +386,10 @@ export class Planet {
     return this.mesh;
   }
 
+  public getGroup(): THREE.Group {
+    return this.group;
+  }
+
   public getMoons(): THREE.Mesh[] {
     return this.moons;
   }

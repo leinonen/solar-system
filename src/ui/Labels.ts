@@ -7,10 +7,17 @@ interface LabelSprite extends THREE.Sprite {
   parentPlanet?: string;
 }
 
+interface LabelLine extends THREE.Line {
+  planetName?: string;
+  moonName?: string;
+  parentPlanet?: string;
+}
+
 export class Labels {
   private solarSystem: SolarSystem;
   private camera: THREE.PerspectiveCamera;
   private labels: Map<string, LabelSprite> = new Map();
+  private labelLines: Map<string, LabelLine> = new Map();
   private visible: boolean = true;
   private onPlanetClick?: (planetName: string) => void;
   private onMoonClick?: (moonName: string, planetName: string) => void;
@@ -35,12 +42,22 @@ export class Labels {
     this.solarSystem.getSun().add(sunLabel);
     this.labels.set('Sun', sunLabel);
     
+    // Create Sun label line
+    const sunLabelLine = this.createLabelLine('Sun', 8);
+    this.solarSystem.getSun().add(sunLabelLine);
+    this.labelLines.set('Sun', sunLabelLine);
+    
     this.solarSystem.getPlanets().forEach(planet => {
       const label = this.createLabelSprite(planet.name);
       const yOffset = Math.max(planet.radius * 1.5 + 2, 4);
       label.position.set(0, yOffset, 0);
-      planet.getMesh().add(label);
+      planet.getGroup().add(label);
       this.labels.set(planet.name, label);
+      
+      // Create planet label line
+      const labelLine = this.createLabelLine(planet.name, yOffset);
+      planet.getGroup().add(labelLine);
+      this.labelLines.set(planet.name, labelLine);
       
       // Create moon labels
       const planetData = this.solarSystem.getPlanetData(planet.name);
@@ -49,13 +66,18 @@ export class Labels {
           const moonData = planetData.moons![index];
           const moonLabel = this.createMoonLabelSprite(moonData.name, planet.name);
           
-          // Position moon label slightly above the moon
+          // Position moon label further above the moon for better visibility
           const moonRadius = moonMesh.geometry.parameters.radius;
-          const yOffset = moonRadius * 2 + 0.5;
+          const yOffset = Math.max(moonRadius * 4 + 2, 3);
           moonLabel.position.set(0, yOffset, 0);
           
           moonMesh.add(moonLabel);
           this.labels.set(`${planet.name}-${moonData.name}`, moonLabel);
+          
+          // Create moon label line
+          const moonLabelLine = this.createMoonLabelLine(moonData.name, planet.name, yOffset);
+          moonMesh.add(moonLabelLine);
+          this.labelLines.set(`${planet.name}-${moonData.name}`, moonLabelLine);
         });
       }
     });
@@ -148,6 +170,47 @@ export class Labels {
     return sprite;
   }
 
+  private createLabelLine(text: string, yOffset: number): LabelLine {
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0), // Planet center
+      new THREE.Vector3(0, yOffset - 1, 0) // Bottom of label (slightly below label position)
+    ]);
+    
+    const material = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.3,
+      depthTest: true,
+      depthWrite: false
+    });
+    
+    const line = new THREE.Line(geometry, material) as LabelLine;
+    line.planetName = text;
+    
+    return line;
+  }
+
+  private createMoonLabelLine(moonName: string, planetName: string, yOffset: number): LabelLine {
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0), // Moon center
+      new THREE.Vector3(0, yOffset - 0.2, 0) // Bottom of label (slightly below label position)
+    ]);
+    
+    const material = new THREE.LineBasicMaterial({
+      color: 0xcccccc,
+      transparent: true,
+      opacity: 0.25,
+      depthTest: true,
+      depthWrite: false
+    });
+    
+    const line = new THREE.Line(geometry, material) as LabelLine;
+    line.moonName = moonName;
+    line.parentPlanet = planetName;
+    
+    return line;
+  }
+
   private setupEventListeners(): void {
     this.canvas.addEventListener('click', this.onCanvasClick.bind(this));
   }
@@ -217,8 +280,20 @@ export class Labels {
           opacity = 1 - ((distance - maxDistance * 0.8) / (maxDistance * 0.2));
         }
         sprite.material.opacity = opacity;
+        
+        // Update corresponding line visibility and opacity
+        const line = this.labelLines.get(name);
+        if (line) {
+          line.visible = true;
+          line.material.opacity = opacity * 0.3; // Make lines even more transparent
+        }
       } else {
         sprite.visible = false;
+        // Hide corresponding line
+        const line = this.labelLines.get(name);
+        if (line) {
+          line.visible = false;
+        }
       }
       
       sprite.lookAt(this.camera.position);
@@ -229,6 +304,9 @@ export class Labels {
     this.visible = visible;
     this.labels.forEach(sprite => {
       sprite.visible = visible;
+    });
+    this.labelLines.forEach(line => {
+      line.visible = visible;
     });
   }
 
