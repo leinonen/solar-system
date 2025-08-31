@@ -25,6 +25,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: 1407.6,
     inclination: 7.005,
     eccentricity: 0.2056,
+    axialTilt: 0.034,
     color: new Color(0x8c7853),
     temperature: { min: -173, max: 427 },
   },
@@ -37,6 +38,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: -5832.5, // Negative for retrograde rotation
     inclination: 3.3946,
     eccentricity: 0.0067,
+    axialTilt: 177.4,
     color: new Color(0xffc649),
     temperature: { min: 462, max: 462 },
   },
@@ -49,6 +51,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: 23.9345,
     inclination: 0.0,
     eccentricity: 0.0167,
+    axialTilt: 23.44,
     color: new Color(0x2233ff),
     temperature: { min: -88, max: 58 },
     moons: [
@@ -69,6 +72,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: 24.6229,
     inclination: 1.85,
     eccentricity: 0.0935,
+    axialTilt: 25.19,
     color: new Color(0xff3333),
     temperature: { min: -143, max: 35 },
     moons: [
@@ -95,6 +99,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: 9.9250,
     inclination: 1.303,
     eccentricity: 0.0489,
+    axialTilt: 3.13,
     color: new Color(0xcc9966),
     temperature: { min: -145, max: -145 },
     moons: [
@@ -133,6 +138,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: 10.656,
     inclination: 2.485,
     eccentricity: 0.0565,
+    axialTilt: 26.73,
     color: new Color(0xffcc99),
     temperature: { min: -178, max: -178 },
     rings: [
@@ -165,6 +171,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: -17.24, // Negative for retrograde
     inclination: 0.773,
     eccentricity: 0.0463,
+    axialTilt: 97.77,
     color: new Color(0x4FD0E0),
     temperature: { min: -224, max: -224 },
     rings: [
@@ -183,6 +190,7 @@ export const PLANETS: PlanetData[] = [
     rotationPeriod: 16.11,
     inclination: 1.768,
     eccentricity: 0.0095,
+    axialTilt: 28.32,
     color: new Color(0x3366ff),
     temperature: { min: -218, max: -218 },
     moons: [

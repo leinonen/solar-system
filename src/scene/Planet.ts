@@ -17,11 +17,10 @@ export class Planet {
   private northPole?: THREE.Mesh;
   private southPole?: THREE.Mesh;
   private equatorPlane?: THREE.Mesh;
-  private earthRotationGroup?: THREE.Group; // For Earth's tilted rotation
+  private rotationGroup?: THREE.Group; // For planet's tilted rotation
   private showAxis: boolean = false;
   private showPoles: boolean = false;
   private showEquator: boolean = false;
-  private static readonly EARTH_AXIAL_TILT = THREE.MathUtils.degToRad(23.4397); // 23.5 degrees in radians
   private referenceJD: number = 2451545.0; // J2000.0 epoch
   private initialOrbitAngle: number = 0;
   public name: string;
@@ -42,7 +41,7 @@ export class Planet {
     this.createMoons();
     this.createRings();
     
-    // Create Earth-specific features if this is Earth (after earthRotationGroup is created)
+    // Create Earth-specific features if this is Earth (after rotationGroup is created)
     if (this.name === 'Earth') {
       this.createEarthAxis();
       this.createEarthPoles();
@@ -96,12 +95,15 @@ export class Planet {
     this.mesh.receiveShadow = true;
     this.mesh.userData = { planet: this };
     
-    // For Earth, create a tilted rotation group
-    if (this.name === 'Earth') {
-      this.earthRotationGroup = new THREE.Group();
-      this.earthRotationGroup.rotation.z = -Planet.EARTH_AXIAL_TILT; // Apply tilt
-      this.earthRotationGroup.add(this.mesh);
-      this.group.add(this.earthRotationGroup);
+    // Create a tilted rotation group for all planets with significant tilt
+    const axialTiltRad = THREE.MathUtils.degToRad(this.data.axialTilt);
+    const hasSignificantTilt = Math.abs(this.data.axialTilt) > 0.1; // Only apply tilt if > 0.1 degrees
+    
+    if (hasSignificantTilt) {
+      this.rotationGroup = new THREE.Group();
+      this.rotationGroup.rotation.z = -axialTiltRad; // Apply tilt
+      this.rotationGroup.add(this.mesh);
+      this.group.add(this.rotationGroup);
     } else {
       this.group.add(this.mesh);
     }
@@ -194,9 +196,9 @@ export class Planet {
     this.axis = new THREE.Line(geometry, material);
     this.axis.visible = this.showAxis;
     
-    // Add the axis to the same rotation group as Earth so it tilts together
-    if (this.earthRotationGroup) {
-      this.earthRotationGroup.add(this.axis);
+    // Add the axis to the same rotation group so it tilts together
+    if (this.rotationGroup) {
+      this.rotationGroup.add(this.axis);
     } else {
       this.group.add(this.axis);
     }
@@ -230,9 +232,9 @@ export class Planet {
     this.southPole.visible = this.showPoles;
     
     // Add poles to the rotation group so they tilt with Earth
-    if (this.earthRotationGroup) {
-      this.earthRotationGroup.add(this.northPole);
-      this.earthRotationGroup.add(this.southPole);
+    if (this.rotationGroup) {
+      this.rotationGroup.add(this.northPole);
+      this.rotationGroup.add(this.southPole);
     } else {
       this.group.add(this.northPole);
       this.group.add(this.southPole);
@@ -259,8 +261,8 @@ export class Planet {
     this.equatorPlane.visible = this.showEquator;
     
     // Add equator to the rotation group so it tilts with Earth
-    if (this.earthRotationGroup) {
-      this.earthRotationGroup.add(this.equatorPlane);
+    if (this.rotationGroup) {
+      this.rotationGroup.add(this.equatorPlane);
     } else {
       this.group.add(this.equatorPlane);
     }
@@ -277,13 +279,8 @@ export class Planet {
     const rotationDirection = this.data.rotationPeriod < 0 ? -1 : 1;
     this.rotationAngle = time * rotationSpeed * rotationDirection * 1000;
     
-    if (this.name === 'Earth' && this.earthRotationGroup) {
-      // Earth: rotate around Y-axis within the tilted group
-      this.mesh.rotation.y = this.rotationAngle;
-    } else {
-      // Other planets rotate around vertical Y-axis
-      this.mesh.rotation.y = this.rotationAngle;
-    }
+    // All planets rotate around Y-axis within their rotation group (if tilted) or directly
+    this.mesh.rotation.y = this.rotationAngle;
     
     // Update moon orbits
     this.moons.forEach((moon, index) => {

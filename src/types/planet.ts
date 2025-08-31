@@ -9,6 +9,7 @@ export interface PlanetData {
   rotationPeriod: number; // hours
   inclination: number; // degrees
   eccentricity: number;
+  axialTilt: number; // degrees
   color: Color;
   temperature?: {
     min: number;
