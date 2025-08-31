@@ -13,7 +13,7 @@ export class StarField {
   }
 
   private createGradientBackground(): void {
-    const geometry = new THREE.SphereGeometry(9500, 32, 32);
+    const geometry = new THREE.SphereGeometry(20000, 32, 32);
     
     const material = new THREE.ShaderMaterial({
       vertexShader: `
@@ -70,8 +70,8 @@ export class StarField {
     for (let i = 0; i < this.starCount; i++) {
       const i3 = i * 3;
       
-      // Random position in a distant sphere (much farther away)
-      const radius = 5000 + Math.random() * 5000;
+      // Random position in a distant sphere (outside Neptune's orbit)
+      const radius = 12000 + Math.random() * 8000;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       
@@ -138,8 +138,8 @@ export class StarField {
     for (let i = 0; i < brightStarCount; i++) {
       const i3 = i * 3;
       
-      // Distant bright stars (but closer than main star field)
-      const radius = 3000 + Math.random() * 2000;
+      // Distant bright stars (but closer than main star field, still outside Neptune)
+      const radius = 8000 + Math.random() * 4000;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       

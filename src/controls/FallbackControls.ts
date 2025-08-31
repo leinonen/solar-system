@@ -21,7 +21,7 @@ export class FallbackControls {
   private mouseDeltaY: number = 0;
   
   private keys: { [key: string]: boolean } = {};
-  private moveSpeed: number = 0.3;
+  private moveSpeed: number = 1.0;
   private rotateSpeed: number = 0.005;
   private zoomSpeed: number = 0.1;
   private dampingFactor: number = 0.1;
@@ -88,7 +88,7 @@ export class FallbackControls {
     
     const delta = event.deltaY > 0 ? 1 : -1;
     this.targetSpherical.radius *= 1 + delta * this.zoomSpeed;
-    this.targetSpherical.radius = Math.max(1, Math.min(5000, this.targetSpherical.radius));
+    this.targetSpherical.radius = Math.max(1, Math.min(10000, this.targetSpherical.radius));
   }
 
   private onKeyDown(event: KeyboardEvent): void {
@@ -112,7 +112,7 @@ export class FallbackControls {
     
     // Speed boost with shift
     if (this.keys['shift']) {
-      moveVector.multiplyScalar(3);
+      moveVector.multiplyScalar(10);
     }
     
     // Apply movement in camera space

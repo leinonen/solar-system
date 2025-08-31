@@ -249,7 +249,7 @@ export class Labels {
       sprite.parent.getWorldPosition(worldPosition);
       const distance = this.camera.position.distanceTo(worldPosition);
       
-      const maxDistance = 500;
+      const maxDistance = 2000;
       const minDistance = 2;
       
       if (distance < maxDistance && distance > minDistance) {

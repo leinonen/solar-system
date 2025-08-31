@@ -226,7 +226,22 @@ export function getScaledRadius(radius: number, isSun: boolean = false): number 
 }
 
 export function getScaledOrbitRadius(auDistance: number): number {
-  return auDistance * 30; // 30 units per AU for good spacing
+  // Progressive scaling system to make the scene feel larger and more expansive
+  // Inner planets get moderate scaling, outer planets get increasingly larger scaling
+  
+  if (auDistance <= 1.5) { // Mercury, Venus, Earth, Mars
+    return auDistance * 50; // 50 units per AU for inner planets
+  } else if (auDistance <= 2.0) { // Mars outer range
+    return auDistance * 60; // Slightly more spacing for Mars
+  } else if (auDistance <= 6.0) { // Jupiter region
+    return auDistance * 80; // Expanded spacing for gas giants
+  } else if (auDistance <= 10.0) { // Saturn region
+    return auDistance * 100; // Even more spacing for Saturn
+  } else if (auDistance <= 20.0) { // Uranus region
+    return auDistance * 120; // Large spacing for ice giants
+  } else { // Neptune and beyond
+    return auDistance * 150; // Maximum spacing for outer solar system
+  }
 }
 
 export function getScaledMoonRadius(radius: number): number {
@@ -239,7 +254,29 @@ export function getScaledMoonRadius(radius: number): number {
 export function getScaledMoonOrbitRadius(radiusAU: number, planetName: string): number {
   // Compromise between realism and visibility
   // Ensure moons orbit outside their parent planet while avoiding planetary collisions
-  const realisticRadius = radiusAU * 30; // Same scale as planetary orbits
+  // Use the same progressive scaling as planetary orbits for consistency
+  
+  // First get the planet's AU distance to determine which scaling tier to use
+  const planet = PLANETS.find(p => p.name === planetName);
+  const planetAU = planet ? planet.orbitalRadius : 1.0;
+  
+  // Apply the same progressive scaling as planetary orbits
+  let baseScale: number;
+  if (planetAU <= 1.5) {
+    baseScale = 50;
+  } else if (planetAU <= 2.0) {
+    baseScale = 60;
+  } else if (planetAU <= 6.0) {
+    baseScale = 80;
+  } else if (planetAU <= 10.0) {
+    baseScale = 100;
+  } else if (planetAU <= 20.0) {
+    baseScale = 120;
+  } else {
+    baseScale = 150;
+  }
+  
+  const realisticRadius = radiusAU * baseScale;
   
   if (planetName === 'Earth') {
     // Earth's moon: ensure it orbits outside Earth's radius with some margin

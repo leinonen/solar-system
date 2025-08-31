@@ -229,7 +229,10 @@ export class SolarSystem {
       const middleRadius = (innerRadius + outerRadius) / 2;
       
       // Convert distance back to AU for display
-      const distanceAU = distance / 30; // Since getScaledOrbitRadius multiplies by 30
+      // With progressive scaling, we need to calculate based on the actual orbital radii
+      const innerPlanet = PLANETS.find(p => getScaledOrbitRadius(p.orbitalRadius) === innerRadius);
+      const outerPlanet = PLANETS.find(p => getScaledOrbitRadius(p.orbitalRadius) === outerRadius);
+      const distanceAU = outerPlanet ? outerPlanet.orbitalRadius : distance / 50; // fallback to approximate
       
       // Create text canvas
       const canvas = document.createElement('canvas');
@@ -1035,7 +1038,7 @@ export class SolarSystem {
 
   private createEclipticPlane(): void {
     // Create a grid representing the ecliptic plane (full solar system scale)
-    const gridSize = 600; // Large enough to show outer planets
+    const gridSize = 5000; // Large enough to show outer planets with new expanded scaling
     const divisions = 24; // 24 divisions for 15° increments
     
     // Create main grid lines
@@ -1053,8 +1056,8 @@ export class SolarSystem {
       positions.push(x1, 0, z1, x2, 0, z2);
     }
     
-    // Latitude circles (concentric circles)
-    const radiusSteps = [50, 100, 150, 200, 300, 400, 500, 600];
+    // Latitude circles (concentric circles) - updated for new expanded orbital scaling
+    const radiusSteps = [50, 100, 200, 400, 800, 1200, 2000, 3000, 4000, 5000];
     radiusSteps.forEach(radius => {
       const segments = 64;
       for (let i = 0; i < segments; i++) {
@@ -1085,7 +1088,7 @@ export class SolarSystem {
 
   private createCelestialEquator(): void {
     // Create celestial equator (inclined 23.4° to ecliptic)
-    const radius = 500; // Large scale to match solar system
+    const radius = 4000; // Large scale to match new expanded solar system
     const segments = 200;
     
     // Create a simple continuous line for the celestial equator
@@ -1118,7 +1121,7 @@ export class SolarSystem {
     this.coordinateSystem.add(celestialEquator);
     
     // Add a subtle plane to show the celestial equator plane
-    const planeGeometry = new THREE.RingGeometry(480, 500, 64);
+    const planeGeometry = new THREE.RingGeometry(3900, 4000, 64);
     const planeMaterial = new THREE.MeshBasicMaterial({
       color: 0x66aa44,
       transparent: true,
@@ -1136,7 +1139,7 @@ export class SolarSystem {
 
   private createCoordinateAxes(): void {
     // Create coordinate axes with labels
-    const axisLength = 400;
+    const axisLength = 3000;
     
     // X-axis (Vernal Equinox direction)
     const xGeometry = new THREE.BufferGeometry();
@@ -1154,15 +1157,15 @@ export class SolarSystem {
     
     // Y-axis (North ecliptic pole)
     const yGeometry = new THREE.BufferGeometry();
-    yGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, -200, 0, 0, 200, 0], 3));
+    yGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, -1500, 0, 0, 1500, 0], 3));
     const yMaterial = new THREE.LineBasicMaterial({ color: 0x44ff44, linewidth: 3 });
     const yAxis = new THREE.Line(yGeometry, yMaterial);
     this.coordinateSystem.add(yAxis);
     
     // Add axis labels
-    this.addAxisLabel('Vernal Equinox\n(0° Ecliptic Longitude)', new THREE.Vector3(axisLength + 20, 0, 0), 0xff4444);
-    this.addAxisLabel('90° Ecliptic Longitude', new THREE.Vector3(0, 0, axisLength + 20), 0x4444ff);
-    this.addAxisLabel('North Ecliptic Pole', new THREE.Vector3(0, 200 + 20, 0), 0x44ff44);
+    this.addAxisLabel('Vernal Equinox\n(0° Ecliptic Longitude)', new THREE.Vector3(axisLength + 100, 0, 0), 0xff4444);
+    this.addAxisLabel('90° Ecliptic Longitude', new THREE.Vector3(0, 0, axisLength + 100), 0x4444ff);
+    this.addAxisLabel('North Ecliptic Pole', new THREE.Vector3(0, 1500 + 100, 0), 0x44ff44);
   }
 
   private addPlaneLabel(text: string, position: THREE.Vector3, color: number): void {
@@ -1276,7 +1279,7 @@ export class SolarSystem {
   }
 
   private createEquinoxSolsticeMarkers(): void {
-    const radius = 30; // Earth's orbital radius
+    const radius = 50; // Earth's orbital radius with new scaling (1 AU * 50)
     const earthSize = 1; // Earth's scaled radius from getScaledRadius
     
     // Vernal Equinox (0°) - where celestial equator crosses ecliptic going north
