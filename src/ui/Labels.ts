@@ -259,15 +259,18 @@ export class Labels {
         let scaleFactor = 1;
         
         // Improved scaling curve to prevent oversized labels when very close
-        if (distance < 5) {
-          // Extremely close: tiny labels
-          scaleFactor = Math.max(0.02, Math.min(0.1, distance / 20));
-        } else if (distance < 15) {
-          // Very close range: much smaller labels
-          scaleFactor = Math.max(0.1, Math.min(0.2, distance / 30));
+        if (distance < 3) {
+          // Extremely close: microscopic labels
+          scaleFactor = Math.max(0.003, Math.min(0.02, distance / 100));
+        } else if (distance < 10) {
+          // Very close range: very tiny labels
+          scaleFactor = Math.max(0.02, Math.min(0.08, distance / 50));
+        } else if (distance < 25) {
+          // Close range: small labels
+          scaleFactor = Math.max(0.08, Math.min(0.25, distance / 60));
         } else if (distance < 50) {
-          // Close range: moderate scaling
-          scaleFactor = Math.max(0.2, Math.min(1.0, distance / 50));
+          // Medium range: moderate scaling
+          scaleFactor = Math.max(0.25, Math.min(1.0, distance / 50));
         } else {
           // Long range: linear scaling for distant exploration
           scaleFactor = Math.min(3.0, distance / 50);
