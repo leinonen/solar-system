@@ -211,34 +211,32 @@ export function getScaledOrbitRadius(auDistance: number): number {
 }
 
 export function getScaledMoonRadius(radius: number): number {
-  // Scale moons to be more visible: minimum 0.1, with better scaling
-  // Use Earth's Moon (1737.4 km) as reference = 0.3 units
-  const moonReference = 1737.4;
-  return Math.max(0.1, (radius / moonReference) * 0.3);
+  // Scale moons proportionally to planets for realistic size ratios
+  // Use same scaling as planets: Earth radius = 1 unit
+  const earthRadius = 6371;
+  return Math.max(0.05, (radius / earthRadius) * 1);
 }
 
 export function getScaledMoonOrbitRadius(radiusAU: number, planetName: string): number {
-  // Scale moon orbits to be more visible with planet-specific scaling
-  const radiusKm = radiusAU * AU;
+  // Compromise between realism and visibility
+  // Ensure moons orbit outside their parent planet while avoiding planetary collisions
+  const realisticRadius = radiusAU * 30; // Same scale as planetary orbits
   
   if (planetName === 'Earth') {
-    // Earth's Moon: 384,400 km -> ~4 units
-    return radiusKm / 100000;
+    // Earth's moon: ensure it orbits outside Earth's radius with some margin
+    // Earth radius = 1 unit, so minimum orbit = 1.5 units
+    return Math.max(1.5, realisticRadius);
   } else if (planetName === 'Mars') {
-    // Mars moons are very close, need different scaling
-    // Phobos: 9,376 km -> ~2.5 units, Deimos: 23,463 km -> ~4 units
-    return Math.max(1.5, radiusKm / 5000);
+    // Mars radius ≈ 0.53 units, ensure moons orbit outside
+    return Math.max(0.8, realisticRadius);
   } else if (planetName === 'Jupiter') {
-    // Jupiter moons need moderate scaling
-    return radiusKm / 200000;
+    // Jupiter radius ≈ 11 units, moons should be outside
+    return Math.max(12, realisticRadius);
   } else if (planetName === 'Saturn') {
-    // Saturn moons need moderate scaling
-    return radiusKm / 150000;
-  } else if (planetName === 'Neptune') {
-    // Triton needs scaling similar to Earth's moon
-    return radiusKm / 120000;
+    // Saturn radius ≈ 9.4 units, moons should be outside  
+    return Math.max(10, realisticRadius);
   } else {
-    // Default scaling
-    return radiusKm / 100000;
+    // For other planets, use minimum safe distance
+    return Math.max(1.0, realisticRadius);
   }
 }
