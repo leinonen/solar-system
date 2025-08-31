@@ -16,6 +16,7 @@ export class TimeControls {
   // Time scale presets with their descriptions
   private readonly TIME_PRESETS = {
     '1': 'Real Time (1x)',
+    '3600': '1 hour per second',
     '86400': '1 day per second', 
     '604800': '1 week per second',
     '2629800': '1 month per second',
@@ -77,8 +78,10 @@ export class TimeControls {
     }
   }
 
-  private onTimeSpeedChange(_event: Event): void {
+  private onTimeSpeedChange(event: Event): void {
     this.updateTimeScale();
+    // Make dropdown lose focus after selection
+    (event.target as HTMLSelectElement).blur();
   }
 
   private updateTimeScale(): void {
