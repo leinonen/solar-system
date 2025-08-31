@@ -214,6 +214,96 @@ export class SolarSystem {
     if (this.showOrbits && this.orbitMode === 'trails') {
       this.updateOrbitTrails();
     }
+    
+    // Update static orbit shading based on camera position
+    if (this.showOrbits && this.orbitMode === 'static' && this.camera) {
+      this.updateStaticOrbitShading();
+    }
+  }
+  
+  private updateStaticOrbitShading(): void {
+    if (!this.camera) return;
+    
+    const cameraPos = this.camera.position;
+    const cameraAngle = Math.atan2(cameraPos.z, cameraPos.x);
+    
+    // Calculate overall camera distance from origin (sun)
+    const cameraDistFromSun = Math.sqrt(
+      cameraPos.x * cameraPos.x + 
+      cameraPos.y * cameraPos.y + 
+      cameraPos.z * cameraPos.z
+    );
+    
+    this.orbits.forEach((orbit) => {
+      if (orbit.userData.mode !== 'static') return;
+      
+      const geometry = orbit.userData.geometry as THREE.BufferGeometry;
+      const material = orbit.userData.material as THREE.ShaderMaterial;
+      const orbitRadius = orbit.userData.orbitRadius;
+      
+      if (!geometry || !material) return;
+      
+      const colorAttribute = geometry.getAttribute('color') as THREE.BufferAttribute;
+      const opacityAttribute = geometry.getAttribute('opacity') as THREE.BufferAttribute;
+      
+      if (!colorAttribute || !opacityAttribute) return;
+      
+      const colors = colorAttribute.array as Float32Array;
+      const opacities = opacityAttribute.array as Float32Array;
+      const segments = 200;
+      
+      // Adaptive scaling based on camera distance
+      // When zoomed out, use relative distances; when zoomed in, use absolute
+      const zoomFactor = Math.min(1.0, cameraDistFromSun / 200);
+      const relativeScale = Math.max(50, cameraDistFromSun * 0.5); // Adaptive scale for distance calculations
+      
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        
+        // Calculate point position
+        const pointX = Math.cos(angle) * orbitRadius;
+        const pointZ = Math.sin(angle) * orbitRadius;
+        
+        // Calculate actual distance from camera to this point
+        const distToCamera = Math.sqrt(
+          (pointX - cameraPos.x) * (pointX - cameraPos.x) + 
+          (pointZ - cameraPos.z) * (pointZ - cameraPos.z) +
+          cameraPos.y * cameraPos.y
+        );
+        
+        // Relative distance normalized by camera distance to maintain consistent depth perception
+        const normalizedDist = distToCamera / relativeScale;
+        
+        // Distance factor that adapts to zoom level
+        // Use smoother falloff and maintain minimum visibility
+        const distanceFactor = Math.max(0.5, Math.exp(-normalizedDist * 0.5));
+        
+        // Depth factor based on angle relative to camera (front vs back of orbit)
+        const relativeAngle = angle - cameraAngle;
+        const angleFactor = Math.cos(relativeAngle) * 0.3 + 0.7; // 0.4 to 1.0 range
+        
+        // Combine factors
+        const combinedFactor = distanceFactor * angleFactor;
+        
+        // Boost factor for distant viewing to maintain visibility
+        const visibilityBoost = Math.min(1.5, 1.0 + zoomFactor * 0.5);
+        
+        // Base color with adaptive brightness
+        const baseR = 0.5;
+        const baseG = 0.6;
+        const baseB = 0.8;
+        
+        colors[i * 3] = baseR * combinedFactor * visibilityBoost;
+        colors[i * 3 + 1] = baseG * combinedFactor * visibilityBoost;
+        colors[i * 3 + 2] = baseB * combinedFactor * visibilityBoost;
+        
+        // Maintain better opacity range for visibility
+        opacities[i] = 0.35 + combinedFactor * 0.4; // Ranges from 0.35 to 0.75
+      }
+      
+      colorAttribute.needsUpdate = true;
+      opacityAttribute.needsUpdate = true;
+    });
   }
   
   private updateOrbitTrails(): void {
@@ -337,30 +427,77 @@ export class SolarSystem {
     
     const geometry = new THREE.BufferGeometry().setFromPoints(fullOrbitPoints);
     
-    // Uniform color for static orbits
+    // Enhanced depth-based shading for static orbits
     const colors = new Float32Array(fullOrbitPoints.length * 3);
-    for (let i = 0; i < fullOrbitPoints.length; i++) {
-      colors[i * 3] = 0.5;     // Red
-      colors[i * 3 + 1] = 0.6; // Green  
-      colors[i * 3 + 2] = 0.8; // Blue
-    }
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const opacities = new Float32Array(fullOrbitPoints.length);
     
-    const material = new THREE.LineBasicMaterial({
+    for (let i = 0; i < fullOrbitPoints.length; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      
+      // Calculate depth factor based on Z position (front/back relative to viewer)
+      // Front parts (negative Z) are brighter, back parts (positive Z) are dimmer
+      const depthFactor = Math.sin(angle) * 0.4 + 0.6; // Ranges from 0.2 to 1.0
+      
+      // Apply distance-based fade from sun
+      const distanceFade = 1.0 - (orbitRadius / 600) * 0.3; // Fade based on orbit size
+      
+      // Base color with depth modulation
+      const baseR = 0.5;
+      const baseG = 0.6;
+      const baseB = 0.8;
+      
+      colors[i * 3] = baseR * depthFactor * distanceFade;     // Red
+      colors[i * 3 + 1] = baseG * depthFactor * distanceFade; // Green  
+      colors[i * 3 + 2] = baseB * depthFactor * distanceFade; // Blue
+      
+      // Variable opacity for additional depth cue
+      opacities[i] = 0.3 + depthFactor * 0.4; // Ranges from 0.3 to 0.7
+    }
+    
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('opacity', new THREE.BufferAttribute(opacities, 1));
+    
+    // Custom shader material for per-vertex opacity
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `
+        attribute float opacity;
+        varying vec3 vColor;
+        varying float vOpacity;
+        
+        void main() {
+          vColor = color;
+          vOpacity = opacity;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        varying float vOpacity;
+        
+        void main() {
+          gl_FragColor = vec4(vColor, vOpacity);
+        }
+      `,
       vertexColors: true,
       transparent: true,
-      opacity: 0.6,
-      linewidth: 1,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
     });
     
     const orbit = new THREE.Line(geometry, material);
-    // Don't apply inclination for static orbits to keep them flat like a coordinate system
-    orbit.visible = this.showOrbits;
+    // Store original material for dynamic updates
     orbit.userData = { 
       orbitRadius: orbitRadius,
       planetName: planetData.name,
-      mode: 'static'
+      mode: 'static',
+      material: material,
+      geometry: geometry
     };
+    
+    // Don't apply inclination for static orbits to keep them flat like a coordinate system
+    orbit.visible = this.showOrbits;
     
     this.orbits.push(orbit);
     this.scene.add(orbit);
