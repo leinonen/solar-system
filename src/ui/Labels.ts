@@ -255,11 +255,17 @@ export class Labels {
       if (distance < maxDistance && distance > minDistance) {
         sprite.visible = true;
         
-        // Progressive scaling based on distance
+        // Progressive scaling based on distance - optimized for space exploration
         let scaleFactor = 1;
         
-        // Inverse scaling - labels get smaller as you get closer
-        scaleFactor = Math.max(0.02, Math.min(1.0, distance / 20));
+        // Better scaling curve for space distances
+        if (distance < 50) {
+          // Close range: inverse scaling to prevent labels from being too large
+          scaleFactor = Math.max(0.1, Math.min(1.0, distance / 25));
+        } else {
+          // Long range: linear scaling for distant exploration
+          scaleFactor = Math.min(3.0, distance / 50);
+        }
         
         // Different base scales for different object types
         let baseScale = 2.5;
