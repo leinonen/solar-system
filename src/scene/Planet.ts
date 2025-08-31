@@ -271,13 +271,13 @@ export class Planet {
   public update(delta: number, time: number): void {
     // Update orbital position
     const orbitalSpeed = (2 * Math.PI) / (this.data.orbitalPeriod * 24 * 3600);
-    this.orbitAngle = this.initialOrbitAngle + time * orbitalSpeed * 1000; // Speed up for visualization
+    this.orbitAngle = this.initialOrbitAngle + time * orbitalSpeed;
     this.updatePosition(time);
     
-    // Update planet rotation
+    // Update planet rotation  
     const rotationSpeed = (2 * Math.PI) / (Math.abs(this.data.rotationPeriod) * 3600);
     const rotationDirection = this.data.rotationPeriod < 0 ? -1 : 1;
-    this.rotationAngle = time * rotationSpeed * rotationDirection * 1000;
+    this.rotationAngle = time * rotationSpeed * rotationDirection;
     
     // All planets rotate around Y-axis within their rotation group (if tilted) or directly
     this.mesh.rotation.y = this.rotationAngle;
@@ -287,7 +287,7 @@ export class Planet {
       if (this.data.moons) {
         const moonData = this.data.moons[index];
         const moonOrbitSpeed = (2 * Math.PI) / (Math.abs(moonData.orbitalPeriod) * 24 * 3600);
-        const moonAngle = time * moonOrbitSpeed * 1000;
+        const moonAngle = time * moonOrbitSpeed;
         const moonOrbitRadius = getScaledMoonOrbitRadius(moonData.orbitalRadius, this.name) * this.currentScale;
         
         moon.position.x = Math.cos(moonAngle) * moonOrbitRadius;

@@ -17,10 +17,24 @@
     
     <div id="time-controls" class="panel">
       <button id="play-pause">⏸</button>
-      <label for="time-speed">Time Speed:</label>
-      <input type="range" id="time-speed" min="1" max="100" value="1">
-      <span id="time-display">Real Time</span>
+      <label for="time-speed">Time Scale:</label>
+      <select id="time-speed">
+        <option value="1" selected>Real Time (1x)</option>
+        <option value="86400">1 day per second</option>
+        <option value="604800">1 week per second</option>
+        <option value="2629800">1 month per second</option>
+        <option value="525969">Earth orbit in 1 minute</option>
+        <option value="6238930">Jupiter orbit in 1 minute</option>
+        <option value="15493277">Saturn orbit in 1 minute</option>
+        <option value="44191440">Uranus orbit in 1 minute</option>
+        <option value="86680800">Neptune orbit in 1 minute</option>
+      </select>
+      <div id="time-display">
+        <div id="current-speed">Real Time (1x)</div>
+        <div id="current-date">Loading...</div>
+      </div>
       <input type="date" id="date-picker">
+      <button id="reset-to-now">Reset to Now</button>
     </div>
     
     <div id="settings" class="panel">

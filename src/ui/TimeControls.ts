@@ -3,13 +3,28 @@ import { SolarSystem } from '../scene/SolarSystem';
 export class TimeControls {
   private solarSystem: SolarSystem;
   private isPaused: boolean = false;
-  private timeScale: number = 1;
-  private readonly SLOWEST_PLANET_PERIOD = 60195; // Neptune's orbital period in days
-  private readonly TARGET_MAX_PERIOD = 60; // 1 minute for slowest planet at max slider
-  private playPauseBtn: HTMLElement | null;
-  private timeSpeedSlider: HTMLInputElement | null;
-  private timeDisplay: HTMLElement | null;
-  private datePicker: HTMLInputElement | null;
+  private timeScale: number = 1; // Default to real time
+  private currentSimulationTime: number = 0; // Seconds since reference date
+  private referenceDate: Date = new Date(); // Start with current date
+  private playPauseBtn: HTMLElement | null = null;
+  private timeSpeedSelect: HTMLSelectElement | null = null;
+  private currentSpeedDisplay: HTMLElement | null = null;
+  private currentDateDisplay: HTMLElement | null = null;
+  private datePicker: HTMLInputElement | null = null;
+  private resetToNowBtn: HTMLElement | null = null;
+  
+  // Time scale presets with their descriptions
+  private readonly TIME_PRESETS = {
+    '1': 'Real Time (1x)',
+    '86400': '1 day per second', 
+    '604800': '1 week per second',
+    '2629800': '1 month per second',
+    '525969': 'Earth orbit in 1 minute',
+    '6238930': 'Jupiter orbit in 1 minute', 
+    '15493277': 'Saturn orbit in 1 minute',
+    '44191440': 'Uranus orbit in 1 minute',
+    '86680800': 'Neptune orbit in 1 minute'
+  };
 
   constructor(solarSystem: SolarSystem) {
     this.solarSystem = solarSystem;
@@ -18,24 +33,35 @@ export class TimeControls {
 
   private initializeControls(): void {
     this.playPauseBtn = document.getElementById('play-pause');
-    this.timeSpeedSlider = document.getElementById('time-speed') as HTMLInputElement;
-    this.timeDisplay = document.getElementById('time-display');
+    this.timeSpeedSelect = document.getElementById('time-speed') as HTMLSelectElement;
+    this.currentSpeedDisplay = document.getElementById('current-speed');
+    this.currentDateDisplay = document.getElementById('current-date');
     this.datePicker = document.getElementById('date-picker') as HTMLInputElement;
+    this.resetToNowBtn = document.getElementById('reset-to-now');
 
     if (this.playPauseBtn) {
       this.playPauseBtn.addEventListener('click', this.togglePlayPause.bind(this));
     }
 
-    if (this.timeSpeedSlider) {
-      this.timeSpeedSlider.addEventListener('input', this.onTimeSpeedChange.bind(this));
+    if (this.timeSpeedSelect) {
+      this.timeSpeedSelect.addEventListener('change', this.onTimeSpeedChange.bind(this));
+      // Initialize with default selection
+      this.updateTimeScale();
     }
 
     if (this.datePicker) {
-      // Set current date
-      const today = new Date().toISOString().split('T')[0];
-      this.datePicker.value = today;
+      // Set current date and time
+      this.setDatePickerToNow();
       this.datePicker.addEventListener('change', this.onDateChange.bind(this));
     }
+
+    if (this.resetToNowBtn) {
+      this.resetToNowBtn.addEventListener('click', this.resetToCurrentDateTime.bind(this));
+    }
+
+    // Initialize with current date/time
+    this.resetToCurrentDateTime();
+    this.startTimeUpdate();
   }
 
   private togglePlayPause(): void {
@@ -51,46 +77,56 @@ export class TimeControls {
     }
   }
 
-  private onTimeSpeedChange(event: Event): void {
-    const slider = event.target as HTMLInputElement;
-    const value = parseFloat(slider.value);
+  private onTimeSpeedChange(_event: Event): void {
+    this.updateTimeScale();
+  }
+
+  private updateTimeScale(): void {
+    if (!this.timeSpeedSelect) return;
     
-    if (value === 1) {
-      this.timeScale = 1;
-      this.updateTimeDisplay('Real Time');
-    } else {
-      // Exponential scaling for fine control at low speeds (good for moon observation)
-      // Neptune period: 60195 days, target: 60 seconds for one lap at max slider
-      const maxScale = (this.SLOWEST_PLANET_PERIOD * 24 * 3600) / (1000 * this.TARGET_MAX_PERIOD);
-      // Exponential curve: 1 to maxScale, with fine control at the beginning
-      const normalizedValue = (value - 1) / 99; // 0 to 1
-      this.timeScale = 1 + (maxScale - 1) * Math.pow(normalizedValue, 2.5);
-      
-      if (this.timeScale < 60) {
-        this.updateTimeDisplay(`${this.timeScale.toFixed(2)}x faster`);
-      } else if (this.timeScale < 1440) {
-        const daysPerSecond = this.timeScale / 86400;
-        this.updateTimeDisplay(`${daysPerSecond.toFixed(3)} days/sec`);
-      } else {
-        const daysPerSecond = this.timeScale / 86400;
-        this.updateTimeDisplay(`${daysPerSecond.toFixed(2)} days/sec`);
-      }
-    }
+    const selectedValue = this.timeSpeedSelect.value;
+    this.timeScale = parseFloat(selectedValue);
+    
+    // Update display
+    const description = this.TIME_PRESETS[selectedValue as keyof typeof this.TIME_PRESETS] || `${this.timeScale}x speed`;
+    this.updateCurrentSpeedDisplay(description);
     
     if (!this.isPaused) {
       this.solarSystem.setTimeScale(this.timeScale);
     }
   }
 
-  private updateTimeDisplay(text: string): void {
-    if (this.timeDisplay) {
-      this.timeDisplay.textContent = text;
+  private updateCurrentSpeedDisplay(text: string): void {
+    if (this.currentSpeedDisplay) {
+      this.currentSpeedDisplay.textContent = text;
     }
+  }
+
+  private updateCurrentDateDisplay(): void {
+    if (!this.currentDateDisplay) return;
+    
+    // Calculate current simulation date
+    const simulationDate = new Date(this.referenceDate.getTime() + (this.currentSimulationTime * 1000));
+    
+    // Format the date nicely
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    
+    this.currentDateDisplay.textContent = simulationDate.toLocaleDateString('en-US', options);
   }
 
   private onDateChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const date = new Date(input.value);
+    
+    // Update our reference date and reset simulation time
+    this.referenceDate = date;
+    this.currentSimulationTime = 0;
     
     // Calculate Julian day number for the selected date
     const jd = this.dateToJulianDay(date);
@@ -98,7 +134,49 @@ export class TimeControls {
     // Set the solar system's reference time to this date
     this.solarSystem.setReferenceDate(jd);
     
+    // Update the display immediately
+    this.updateCurrentDateDisplay();
+    
     console.log('Date changed to:', date, 'JD:', jd);
+  }
+
+  private setDatePickerToNow(): void {
+    if (!this.datePicker) return;
+    const now = new Date();
+    // Format for date input (YYYY-MM-DD)
+    const dateString = now.getFullYear() + '-' + 
+      String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(now.getDate()).padStart(2, '0');
+    this.datePicker.value = dateString;
+  }
+
+  private resetToCurrentDateTime(): void {
+    // Reset to current date and time
+    this.referenceDate = new Date();
+    this.currentSimulationTime = 0;
+    
+    // Update date picker
+    this.setDatePickerToNow();
+    
+    // Calculate Julian day and update solar system
+    const jd = this.dateToJulianDay(this.referenceDate);
+    this.solarSystem.setReferenceDate(jd);
+    
+    // Update display
+    this.updateCurrentDateDisplay();
+  }
+
+  private startTimeUpdate(): void {
+    // Update the current date display periodically
+    setInterval(() => {
+      if (!this.isPaused) {
+        // Update simulation time based on time scale
+        // delta is approximately 1/60 second (60 FPS)
+        const deltaSeconds = 1/60;
+        this.currentSimulationTime += deltaSeconds * this.timeScale;
+        this.updateCurrentDateDisplay();
+      }
+    }, 1000/60); // 60 FPS updates
   }
   
   private dateToJulianDay(date: Date): number {
