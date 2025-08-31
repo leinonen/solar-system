@@ -22,6 +22,7 @@ space/
 │   ├── scene/
 │   │   ├── SolarSystem.ts   - Main scene manager
 │   │   ├── Planet.ts        - Planet rendering
+│   │   ├── AsteroidBelt.ts  - Asteroid belt visualization
 │   │   ├── StarField.ts    - Background stars
 │   │   └── Skybox.ts        - Milky Way background
 │   ├── controls/
@@ -54,6 +55,7 @@ space/
 - Interactive planet selection and information display
 - Time control (speed up/slow down/reverse)
 - Visual settings (orbits, labels, realistic scale)
+- Asteroid belt with accurate orbital dynamics
 
 ## Testing Approach
 No specific test framework is configured. Manual testing recommended:
@@ -70,6 +72,7 @@ No specific test framework is configured. Manual testing recommended:
 
 ## Performance Considerations
 - StarField uses instanced rendering for 15,000+ stars
+- Asteroid belt uses instanced rendering for 2,000 asteroids
 - Planet labels use distance-based scaling to reduce overdraw
 - Orbital paths are rendered as line segments
 - Consider LOD (Level of Detail) for future texture improvements
@@ -77,7 +80,7 @@ No specific test framework is configured. Manual testing recommended:
 ## Future Enhancements Planned
 - NASA texture integration for realistic planet surfaces
 - Real-time ephemeris data from JPL Horizons API
-- Asteroid belt and comet visualization
+- Comet visualization with orbital trajectories
 - Historical spacecraft mission paths
 - VR/AR support
 
@@ -86,3 +89,4 @@ No specific test framework is configured. Manual testing recommended:
 - SpaceMouse requires user gesture to connect (security requirement)
 - Time scale affects orbital calculations - extreme values may cause instability
 - Planet scales can be toggled between visual and realistic modes
+- Asteroid belt orbital mechanics follow Kepler's third law with realistic inclination distribution

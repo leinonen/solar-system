@@ -24,11 +24,13 @@ An interactive 3D solar system simulator built with Three.js, featuring real pla
   - Planet labels with distance-based scaling
   - Orbital path visualization
   - Saturn's rings and major moons
+  - Asteroid belt with 2,000 individually simulated asteroids
 - **Settings Panel**:
   - Toggle orbit visibility
   - Adjust planet scale
   - Toggle labels
   - Realistic scale mode
+  - Toggle asteroid belt visibility
 
 ## Quick Start
 
@@ -108,15 +110,16 @@ src/
 
 ## Performance
 
-- **Rendering**: 60 FPS target with 15,000+ stars using instanced rendering
+- **Rendering**: 60 FPS target with 15,000+ stars and 2,000 asteroids using instanced rendering
 - **Memory**: Optimized geometry and texture usage
 - **Controls**: Smooth 6DOF navigation with SpaceMouse or fallback controls
+- **Physics**: Accurate orbital mechanics following Kepler's laws
 
 ## Future Enhancements
 
 - [ ] High-resolution planet textures from NASA
 - [ ] Real-time planetary positions from JPL Horizons API
-- [ ] Asteroid belt visualization
+- [x] Asteroid belt visualization with accurate orbital dynamics
 - [ ] Comet trajectories and periodic comets
 - [ ] Historical spacecraft mission paths
 - [ ] VR/AR support
@@ -130,6 +133,7 @@ src/
 - Orbital distances are compressed for better viewing experience
 - Time can be accelerated up to 100x normal speed
 - SpaceMouse requires Chrome/Edge with WebHID support
+- Asteroid belt follows Kepler's third law with realistic inclination distribution
 - See `CLAUDE.md` for detailed development instructions
 
 ## Contributing
