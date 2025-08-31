@@ -330,7 +330,8 @@ class App {
     const bounds = this.calculateSolarSystemBounds();
     const height = bounds.maxDistance * 1.5; // Position camera above to see all planets
     
-    const position = new THREE.Vector3(0, height, 0);
+    // Offset position to align with flipped isometric view orientation
+    const position = new THREE.Vector3(-height * 0.2, height, -height * 0.2);
     const target = bounds.center;
     
     this.controls.smoothMoveTo(position, target);
@@ -341,10 +342,11 @@ class App {
     const distance = bounds.maxDistance * 1.2;
     
     // Isometric angle: 45 degrees from horizontal, 35.26 degrees from ground
+    // Flipped to opposite direction to show Saturn in the distance
     const position = new THREE.Vector3(
-      distance * 0.7071, // cos(45°) * distance
-      distance * 0.5774, // sin(35.26°) * distance
-      distance * 0.7071  // cos(45°) * distance
+      -distance * 0.7071, // -cos(45°) * distance (flipped X)
+      distance * 0.5774,  // sin(35.26°) * distance (same Y)
+      -distance * 0.7071  // -cos(45°) * distance (flipped Z)
     );
     const target = bounds.center;
     
