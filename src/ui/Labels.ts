@@ -258,10 +258,16 @@ export class Labels {
         // Progressive scaling based on distance - optimized for space exploration
         let scaleFactor = 1;
         
-        // Better scaling curve for space distances
-        if (distance < 50) {
-          // Close range: inverse scaling to prevent labels from being too large
-          scaleFactor = Math.max(0.1, Math.min(1.0, distance / 25));
+        // Improved scaling curve to prevent oversized labels when very close
+        if (distance < 5) {
+          // Extremely close: tiny labels
+          scaleFactor = Math.max(0.02, Math.min(0.1, distance / 20));
+        } else if (distance < 15) {
+          // Very close range: much smaller labels
+          scaleFactor = Math.max(0.1, Math.min(0.2, distance / 30));
+        } else if (distance < 50) {
+          // Close range: moderate scaling
+          scaleFactor = Math.max(0.2, Math.min(1.0, distance / 50));
         } else {
           // Long range: linear scaling for distant exploration
           scaleFactor = Math.min(3.0, distance / 50);
@@ -291,7 +297,7 @@ export class Labels {
         const line = this.labelLines.get(name);
         if (line) {
           line.visible = true;
-          line.material.opacity = opacity * 0.3; // Make lines even more transparent
+          (line.material as THREE.LineBasicMaterial).opacity = opacity * 0.3; // Make lines even more transparent
         }
       } else {
         sprite.visible = false;
