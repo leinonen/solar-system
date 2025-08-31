@@ -21,7 +21,7 @@ export class FallbackControls {
   private mouseDeltaY: number = 0;
   
   private keys: { [key: string]: boolean } = {};
-  private moveSpeed: number = 5;
+  private moveSpeed: number = 0.3;
   private rotateSpeed: number = 0.005;
   private zoomSpeed: number = 0.1;
   private dampingFactor: number = 0.1;
@@ -142,8 +142,10 @@ export class FallbackControls {
       
       // Update spherical coordinates to match current state
       const offset = this.camera.position.clone().sub(this.currentTarget);
+      const previousRadius = this.targetSpherical.radius; // Preserve zoom level
       this.spherical.setFromVector3(offset);
       this.targetSpherical.copy(this.spherical);
+      this.targetSpherical.radius = previousRadius; // Restore zoom level
     } else if (this.isAnimating) {
       this.currentTarget.lerp(this.target, 0.1);
       if (this.currentTarget.distanceTo(this.target) < 0.1) {
