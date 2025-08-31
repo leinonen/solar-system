@@ -183,7 +183,13 @@ class App {
     if (!infoElement) return;
     
     if (!selectionInfo) {
-      infoElement.textContent = 'Click on a planet, moon, or the Sun for information';
+      infoElement.innerHTML = `
+        <strong>Camera Controls:</strong><br>
+        <span style="color: #aaa;">Mouse:</span> Drag to rotate • Scroll to zoom<br>
+        <span style="color: #aaa;">Keyboard:</span> WASD to move • Q/E up/down • Shift for speed<br>
+        <br>
+        Click on a planet, moon, or the Sun for information
+      `;
       return;
     }
 
