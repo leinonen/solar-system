@@ -10,9 +10,9 @@ interface AppInterface {
   setShowCoordinateSystem(show: boolean): void;
   setShowEquinoxMarkers(show: boolean): void;
   setEnableShadows(enable: boolean): void;
-  setShowEarthAxis(show: boolean): void;
-  setShowEarthPoles(show: boolean): void;
-  setShowEarthEquator(show: boolean): void;
+  setShowAxis(show: boolean): void;
+  setShowPoles(show: boolean): void;
+  setShowEquator(show: boolean): void;
 }
 
 import { SolarSystem } from '../scene/SolarSystem';
@@ -33,9 +33,9 @@ export class Settings {
   private showCoordinateSystemCheckbox: HTMLInputElement | null;
   private showEquinoxMarkersCheckbox: HTMLInputElement | null;
   private enableShadowsCheckbox: HTMLInputElement | null;
-  private showEarthAxisCheckbox: HTMLInputElement | null;
-  private showEarthPolesCheckbox: HTMLInputElement | null;
-  private showEarthEquatorCheckbox: HTMLInputElement | null;
+  private showAxisCheckbox: HTMLInputElement | null;
+  private showPolesCheckbox: HTMLInputElement | null;
+  private showEquatorCheckbox: HTMLInputElement | null;
   private isOpen: boolean = false;
 
   constructor(solarSystem: SolarSystem, app: AppInterface) {
@@ -58,9 +58,9 @@ export class Settings {
     this.showCoordinateSystemCheckbox = document.getElementById('show-coordinate-system') as HTMLInputElement;
     this.showEquinoxMarkersCheckbox = document.getElementById('show-equinox-markers') as HTMLInputElement;
     this.enableShadowsCheckbox = document.getElementById('enable-shadows') as HTMLInputElement;
-    this.showEarthAxisCheckbox = document.getElementById('show-earth-axis') as HTMLInputElement;
-    this.showEarthPolesCheckbox = document.getElementById('show-earth-poles') as HTMLInputElement;
-    this.showEarthEquatorCheckbox = document.getElementById('show-earth-equator') as HTMLInputElement;
+    this.showAxisCheckbox = document.getElementById('show-axis') as HTMLInputElement;
+    this.showPolesCheckbox = document.getElementById('show-poles') as HTMLInputElement;
+    this.showEquatorCheckbox = document.getElementById('show-equator') as HTMLInputElement;
 
     if (this.settingsToggle && this.settingsContent) {
       this.settingsToggle.addEventListener('click', this.toggleSettings.bind(this));
@@ -143,24 +143,24 @@ export class Settings {
       });
     }
 
-    if (this.showEarthAxisCheckbox) {
-      this.showEarthAxisCheckbox.addEventListener('change', (e) => {
+    if (this.showAxisCheckbox) {
+      this.showAxisCheckbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
-        this.app.setShowEarthAxis(target.checked);
+        this.app.setShowAxis(target.checked);
       });
     }
 
-    if (this.showEarthPolesCheckbox) {
-      this.showEarthPolesCheckbox.addEventListener('change', (e) => {
+    if (this.showPolesCheckbox) {
+      this.showPolesCheckbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
-        this.app.setShowEarthPoles(target.checked);
+        this.app.setShowPoles(target.checked);
       });
     }
 
-    if (this.showEarthEquatorCheckbox) {
-      this.showEarthEquatorCheckbox.addEventListener('change', (e) => {
+    if (this.showEquatorCheckbox) {
+      this.showEquatorCheckbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
-        this.app.setShowEarthEquator(target.checked);
+        this.app.setShowEquator(target.checked);
       });
     }
   }

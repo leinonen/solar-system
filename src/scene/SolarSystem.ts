@@ -8,6 +8,13 @@ export class SolarSystem {
   private scene: THREE.Scene;
   private sun!: THREE.Mesh;
   private sunLight!: THREE.PointLight;
+  private sunAxis?: THREE.Line;
+  private sunNorthPole?: THREE.Mesh;
+  private sunSouthPole?: THREE.Mesh;
+  private sunEquatorPlane?: THREE.Mesh;
+  private showSunAxis: boolean = false;
+  private showSunPoles: boolean = false;
+  private showSunEquator: boolean = false;
   private planets: Planet[] = [];
   private asteroidBelt!: AsteroidBelt;
   private orbits: THREE.Line[] = [];
@@ -118,6 +125,79 @@ export class SolarSystem {
     sunGlow.scale.set(sunRadius * 6, sunRadius * 6, 1);
     sunGlow.position.set(0, 0, 0);
     this.scene.add(sunGlow);
+    
+    // Create Sun axis, poles, and equator
+    this.createSunAxis();
+    this.createSunPoles();
+    this.createSunEquator();
+  }
+
+  private createSunAxis(): void {
+    const sunRadius = getScaledRadius(SUN_DATA.radius, true);
+    const axisLength = sunRadius * 2.5;
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -axisLength, 0), // South pole end
+      new THREE.Vector3(0, axisLength, 0),  // North pole end
+    ]);
+    
+    const material = new THREE.LineBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.8,
+    });
+    
+    this.sunAxis = new THREE.Line(geometry, material);
+    this.sunAxis.visible = this.showSunAxis;
+    this.scene.add(this.sunAxis);
+  }
+
+  private createSunPoles(): void {
+    const sunRadius = getScaledRadius(SUN_DATA.radius, true);
+    const poleRadius = sunRadius * 0.1;
+    const poleDistance = sunRadius * 1.1;
+    
+    const geometry = new THREE.SphereGeometry(poleRadius, 8, 8);
+    
+    // North Pole (red)
+    const northMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.9,
+    });
+    this.sunNorthPole = new THREE.Mesh(geometry, northMaterial);
+    this.sunNorthPole.position.set(0, poleDistance, 0);
+    this.sunNorthPole.visible = this.showSunPoles;
+    this.scene.add(this.sunNorthPole);
+    
+    // South Pole (blue)
+    const southMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0000ff,
+      transparent: true,
+      opacity: 0.9,
+    });
+    this.sunSouthPole = new THREE.Mesh(geometry.clone(), southMaterial);
+    this.sunSouthPole.position.set(0, -poleDistance, 0);
+    this.sunSouthPole.visible = this.showSunPoles;
+    this.scene.add(this.sunSouthPole);
+  }
+
+  private createSunEquator(): void {
+    const sunRadius = getScaledRadius(SUN_DATA.radius, true);
+    const equatorRadius = sunRadius * 1.05;
+    
+    const geometry = new THREE.RingGeometry(equatorRadius * 0.98, equatorRadius * 1.02, 64);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.6,
+    });
+    
+    this.sunEquatorPlane = new THREE.Mesh(geometry, material);
+    this.sunEquatorPlane.rotation.x = Math.PI / 2; // Make it horizontal
+    this.sunEquatorPlane.visible = this.showSunEquator;
+    this.scene.add(this.sunEquatorPlane);
   }
 
   private createPlanets(): void {
@@ -850,24 +930,43 @@ export class SolarSystem {
     }
   }
 
-  public setShowEarthAxis(show: boolean): void {
-    const earth = this.planets.find(p => p.name === 'Earth');
-    if (earth) {
-      earth.setShowEarthAxis(show);
+  public setShowAxis(show: boolean): void {
+    // Apply to all planets
+    this.planets.forEach(planet => {
+      planet.setShowAxis(show);
+    });
+    
+    // Apply to sun
+    this.showSunAxis = show;
+    if (this.sunAxis) {
+      this.sunAxis.visible = show;
     }
   }
 
-  public setShowEarthPoles(show: boolean): void {
-    const earth = this.planets.find(p => p.name === 'Earth');
-    if (earth) {
-      earth.setShowEarthPoles(show);
+  public setShowPoles(show: boolean): void {
+    // Apply to all planets
+    this.planets.forEach(planet => {
+      planet.setShowPoles(show);
+    });
+    
+    // Apply to sun
+    this.showSunPoles = show;
+    if (this.sunNorthPole && this.sunSouthPole) {
+      this.sunNorthPole.visible = show;
+      this.sunSouthPole.visible = show;
     }
   }
 
-  public setShowEarthEquator(show: boolean): void {
-    const earth = this.planets.find(p => p.name === 'Earth');
-    if (earth) {
-      earth.setShowEarthEquator(show);
+  public setShowEquator(show: boolean): void {
+    // Apply to all planets
+    this.planets.forEach(planet => {
+      planet.setShowEquator(show);
+    });
+    
+    // Apply to sun
+    this.showSunEquator = show;
+    if (this.sunEquatorPlane) {
+      this.sunEquatorPlane.visible = show;
     }
   }
 

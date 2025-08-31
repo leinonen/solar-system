@@ -8,6 +8,10 @@ export class Planet {
   private mesh: THREE.Mesh;
   private group: THREE.Group;
   private moons: THREE.Mesh[] = [];
+  private moonAxes: THREE.Line[] = [];
+  private moonNorthPoles: THREE.Mesh[] = [];
+  private moonSouthPoles: THREE.Mesh[] = [];
+  private moonEquators: THREE.Mesh[] = [];
   private rings?: THREE.Mesh;
   private baseScale: number;
   private currentScale: number;
@@ -41,12 +45,10 @@ export class Planet {
     this.createMoons();
     this.createRings();
     
-    // Create Earth-specific features if this is Earth (after rotationGroup is created)
-    if (this.name === 'Earth') {
-      this.createEarthAxis();
-      this.createEarthPoles();
-      this.createEarthEquator();
-    }
+    // Create axis, poles, and equator for all planets
+    this.createAxis();
+    this.createPoles();
+    this.createEquator();
     
     // Calculate initial position based on reference date
     this.initialOrbitAngle = this.calculateOrbitAngleForDate(this.referenceJD);
@@ -163,6 +165,9 @@ export class Planet {
       
       this.moons.push(moon);
       
+      // Create moon axis, poles, and equator
+      this.createMoonVisualization(moonRadius, moonOrbitRadius);
+      
       // Add moon to the same coordinate system as the planet (rotationGroup if tilted, otherwise group)
       // This ensures moons orbit around the planet's equatorial plane, not the orbital plane
       if (this.rotationGroup) {
@@ -194,7 +199,7 @@ export class Planet {
     });
   }
 
-  private createEarthAxis(): void {
+  private createAxis(): void {
     const radius = getScaledRadius(this.data.radius) * this.currentScale;
     const axisLength = radius * 2.5;
     
@@ -221,7 +226,7 @@ export class Planet {
     }
   }
 
-  private createEarthPoles(): void {
+  private createPoles(): void {
     const radius = getScaledRadius(this.data.radius) * this.currentScale;
     const poleRadius = radius * 0.1;
     const poleDistance = radius * 1.1;
@@ -258,7 +263,7 @@ export class Planet {
     }
   }
 
-  private createEarthEquator(): void {
+  private createEquator(): void {
     const radius = getScaledRadius(this.data.radius) * this.currentScale;
     const equatorRadius = radius * 1.05;
     
@@ -282,6 +287,83 @@ export class Planet {
       this.rotationGroup.add(this.equatorPlane);
     } else {
       this.group.add(this.equatorPlane);
+    }
+  }
+
+  private createMoonVisualization(moonRadius: number, moonOrbitRadius: number): void {
+    const axisLength = moonRadius * 2.5;
+    const poleRadius = moonRadius * 0.1;
+    const poleDistance = moonRadius * 1.1;
+    const equatorRadius = moonRadius * 1.05;
+    
+    // Create moon axis
+    const axisGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -axisLength, 0),
+      new THREE.Vector3(0, axisLength, 0),
+    ]);
+    
+    const axisMaterial = new THREE.LineBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.8,
+    });
+    
+    const moonAxis = new THREE.Line(axisGeometry, axisMaterial);
+    moonAxis.visible = this.showAxis;
+    moonAxis.position.x = moonOrbitRadius; // Position at moon's initial orbit position
+    this.moonAxes.push(moonAxis);
+    
+    // Create moon poles
+    const poleGeometry = new THREE.SphereGeometry(poleRadius, 8, 8);
+    
+    // North Pole (red)
+    const northMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const moonNorthPole = new THREE.Mesh(poleGeometry, northMaterial);
+    moonNorthPole.position.set(moonOrbitRadius, poleDistance, 0);
+    moonNorthPole.visible = this.showPoles;
+    this.moonNorthPoles.push(moonNorthPole);
+    
+    // South Pole (blue)
+    const southMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0000ff,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const moonSouthPole = new THREE.Mesh(poleGeometry.clone(), southMaterial);
+    moonSouthPole.position.set(moonOrbitRadius, -poleDistance, 0);
+    moonSouthPole.visible = this.showPoles;
+    this.moonSouthPoles.push(moonSouthPole);
+    
+    // Create moon equator
+    const equatorGeometry = new THREE.RingGeometry(equatorRadius * 0.98, equatorRadius * 1.02, 32);
+    const equatorMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.6,
+    });
+    
+    const moonEquator = new THREE.Mesh(equatorGeometry, equatorMaterial);
+    moonEquator.rotation.x = Math.PI / 2; // Make it horizontal
+    moonEquator.position.x = moonOrbitRadius;
+    moonEquator.visible = this.showEquator;
+    this.moonEquators.push(moonEquator);
+    
+    // Add all moon visualization elements to the same coordinate system as the moon
+    if (this.rotationGroup) {
+      this.rotationGroup.add(moonAxis);
+      this.rotationGroup.add(moonNorthPole);
+      this.rotationGroup.add(moonSouthPole);
+      this.rotationGroup.add(moonEquator);
+    } else {
+      this.group.add(moonAxis);
+      this.group.add(moonNorthPole);
+      this.group.add(moonSouthPole);
+      this.group.add(moonEquator);
     }
   }
 
@@ -315,18 +397,42 @@ export class Planet {
         const z = Math.sin(moonAngle) * moonOrbitRadius;
         
         // Apply orbital inclination relative to the planet's equatorial plane
+        let finalX, finalY, finalZ;
         if (moonData.inclination !== undefined) {
           const inclinationRad = THREE.MathUtils.degToRad(moonData.inclination);
           
           // Rotate the orbit around the X-axis to tilt relative to equatorial plane
-          moon.position.x = x;
-          moon.position.y = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
-          moon.position.z = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
+          finalX = x;
+          finalY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
+          finalZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
         } else {
           // No inclination - orbit in the planet's equatorial plane
-          moon.position.x = x;
-          moon.position.y = y;
-          moon.position.z = z;
+          finalX = x;
+          finalY = y;
+          finalZ = z;
+        }
+        
+        // Update moon position
+        moon.position.x = finalX;
+        moon.position.y = finalY;
+        moon.position.z = finalZ;
+        
+        // Update moon visualization elements positions
+        if (this.moonAxes[index]) {
+          this.moonAxes[index].position.set(finalX, finalY, finalZ);
+        }
+        if (this.moonNorthPoles[index]) {
+          const poleRadius = getScaledMoonRadius(moonData.radius) * this.currentScale;
+          const poleDistance = poleRadius * 1.1;
+          this.moonNorthPoles[index].position.set(finalX, finalY + poleDistance, finalZ);
+        }
+        if (this.moonSouthPoles[index]) {
+          const poleRadius = getScaledMoonRadius(moonData.radius) * this.currentScale;
+          const poleDistance = poleRadius * 1.1;
+          this.moonSouthPoles[index].position.set(finalX, finalY - poleDistance, finalZ);
+        }
+        if (this.moonEquators[index]) {
+          this.moonEquators[index].position.set(finalX, finalY, finalZ);
         }
       }
     });
@@ -377,6 +483,19 @@ export class Planet {
       moon.scale.setScalar(scale / this.baseScale);
       if (this.data.moons) {
         // Moon orbit radius will be updated in the update loop
+        // Update moon visualization elements
+        if (this.moonAxes[index]) {
+          this.moonAxes[index].scale.setScalar(scale / this.baseScale);
+        }
+        if (this.moonNorthPoles[index]) {
+          this.moonNorthPoles[index].scale.setScalar(scale / this.baseScale);
+        }
+        if (this.moonSouthPoles[index]) {
+          this.moonSouthPoles[index].scale.setScalar(scale / this.baseScale);
+        }
+        if (this.moonEquators[index]) {
+          this.moonEquators[index].scale.setScalar(scale / this.baseScale);
+        }
       }
     });
     
@@ -385,26 +504,24 @@ export class Planet {
       this.rings.scale.setScalar(scale / this.baseScale);
     }
     
-    // Update Earth-specific features if this is Earth
-    if (this.name === 'Earth') {
-      const poleDistance = newRadius * 1.1;
-      
-      if (this.axis) {
-        this.axis.scale.setScalar(scale / this.baseScale);
-      }
-      if (this.northPole) {
-        this.northPole.scale.setScalar(scale / this.baseScale);
-        // Simple vertical position - tilt is handled by rotation group
-        this.northPole.position.set(0, poleDistance, 0);
-      }
-      if (this.southPole) {
-        this.southPole.scale.setScalar(scale / this.baseScale);
-        // Simple vertical position - tilt is handled by rotation group
-        this.southPole.position.set(0, -poleDistance, 0);
-      }
-      if (this.equatorPlane) {
-        this.equatorPlane.scale.setScalar(scale / this.baseScale);
-      }
+    // Update axis, poles, and equator features for all planets
+    const poleDistance = newRadius * 1.1;
+    
+    if (this.axis) {
+      this.axis.scale.setScalar(scale / this.baseScale);
+    }
+    if (this.northPole) {
+      this.northPole.scale.setScalar(scale / this.baseScale);
+      // Simple vertical position - tilt is handled by rotation group
+      this.northPole.position.set(0, poleDistance, 0);
+    }
+    if (this.southPole) {
+      this.southPole.scale.setScalar(scale / this.baseScale);
+      // Simple vertical position - tilt is handled by rotation group
+      this.southPole.position.set(0, -poleDistance, 0);
+    }
+    if (this.equatorPlane) {
+      this.equatorPlane.scale.setScalar(scale / this.baseScale);
     }
     
     this.radius = newRadius;
@@ -470,23 +587,41 @@ export class Planet {
     }
   }
 
-  public setShowEarthAxis(show: boolean): void {
-    if (this.name !== 'Earth' || !this.axis) return;
+  public setShowAxis(show: boolean): void {
     this.showAxis = show;
-    this.axis.visible = show;
+    if (this.axis) {
+      this.axis.visible = show;
+    }
+    // Update moon axes
+    this.moonAxes.forEach(moonAxis => {
+      moonAxis.visible = show;
+    });
   }
 
-  public setShowEarthPoles(show: boolean): void {
-    if (this.name !== 'Earth' || !this.northPole || !this.southPole) return;
+  public setShowPoles(show: boolean): void {
     this.showPoles = show;
-    this.northPole.visible = show;
-    this.southPole.visible = show;
+    if (this.northPole && this.southPole) {
+      this.northPole.visible = show;
+      this.southPole.visible = show;
+    }
+    // Update moon poles
+    this.moonNorthPoles.forEach(moonNorthPole => {
+      moonNorthPole.visible = show;
+    });
+    this.moonSouthPoles.forEach(moonSouthPole => {
+      moonSouthPole.visible = show;
+    });
   }
 
-  public setShowEarthEquator(show: boolean): void {
-    if (this.name !== 'Earth' || !this.equatorPlane) return;
+  public setShowEquator(show: boolean): void {
     this.showEquator = show;
-    this.equatorPlane.visible = show;
+    if (this.equatorPlane) {
+      this.equatorPlane.visible = show;
+    }
+    // Update moon equators
+    this.moonEquators.forEach(moonEquator => {
+      moonEquator.visible = show;
+    });
   }
 
   public setShowMoons(show: boolean): void {

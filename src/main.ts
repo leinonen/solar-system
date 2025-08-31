@@ -294,16 +294,16 @@ class App {
     this.solarSystem.setEnableShadows(enable);
   }
 
-  public setShowEarthAxis(show: boolean): void {
-    this.solarSystem.setShowEarthAxis(show);
+  public setShowAxis(show: boolean): void {
+    this.solarSystem.setShowAxis(show);
   }
 
-  public setShowEarthPoles(show: boolean): void {
-    this.solarSystem.setShowEarthPoles(show);
+  public setShowPoles(show: boolean): void {
+    this.solarSystem.setShowPoles(show);
   }
 
-  public setShowEarthEquator(show: boolean): void {
-    this.solarSystem.setShowEarthEquator(show);
+  public setShowEquator(show: boolean): void {
+    this.solarSystem.setShowEquator(show);
   }
 
   private isUsingControls(): boolean {
