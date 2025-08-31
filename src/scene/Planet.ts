@@ -152,7 +152,14 @@ export class Planet {
       moon.position.x = moonOrbitRadius;
       
       this.moons.push(moon);
-      this.group.add(moon);
+      
+      // Add moon to the same coordinate system as the planet (rotationGroup if tilted, otherwise group)
+      // This ensures moons orbit around the planet's equatorial plane, not the orbital plane
+      if (this.rotationGroup) {
+        this.rotationGroup.add(moon);
+      } else {
+        this.group.add(moon);
+      }
     });
   }
 
@@ -290,8 +297,27 @@ export class Planet {
         const moonAngle = time * moonOrbitSpeed;
         const moonOrbitRadius = getScaledMoonOrbitRadius(moonData.orbitalRadius, this.name) * this.currentScale;
         
-        moon.position.x = Math.cos(moonAngle) * moonOrbitRadius;
-        moon.position.z = Math.sin(moonAngle) * moonOrbitRadius;
+        // Calculate orbital position in the planet's equatorial plane
+        // Since moons are now in the rotationGroup coordinate system, 
+        // they automatically orbit around the planet's equatorial plane
+        const x = Math.cos(moonAngle) * moonOrbitRadius;
+        const y = 0;
+        const z = Math.sin(moonAngle) * moonOrbitRadius;
+        
+        // Apply orbital inclination relative to the planet's equatorial plane
+        if (moonData.inclination !== undefined) {
+          const inclinationRad = THREE.MathUtils.degToRad(moonData.inclination);
+          
+          // Rotate the orbit around the X-axis to tilt relative to equatorial plane
+          moon.position.x = x;
+          moon.position.y = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
+          moon.position.z = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
+        } else {
+          // No inclination - orbit in the planet's equatorial plane
+          moon.position.x = x;
+          moon.position.y = y;
+          moon.position.z = z;
+        }
       }
     });
   }

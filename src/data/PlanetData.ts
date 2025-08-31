@@ -61,6 +61,7 @@ export const PLANETS: PlanetData[] = [
         radius: 1737.4,
         orbitalRadius: 384400 / AU, // Convert km to AU
         orbitalPeriod: 27.322,
+        inclination: 5.145, // degrees to Earth's equator
       },
     ],
   },
@@ -82,12 +83,14 @@ export const PLANETS: PlanetData[] = [
         radius: 11.267,
         orbitalRadius: 9376 / AU,
         orbitalPeriod: 0.31891,
+        inclination: 1.093, // degrees to Mars equator
       },
       {
         name: 'Deimos',
         radius: 6.2,
         orbitalRadius: 23463 / AU,
         orbitalPeriod: 1.263,
+        inclination: 1.791, // degrees to Mars equator
       },
     ],
   },
@@ -109,24 +112,28 @@ export const PLANETS: PlanetData[] = [
         radius: 1821.6,
         orbitalRadius: 421800 / AU,
         orbitalPeriod: 1.769,
+        inclination: 0.05, // degrees to Jupiter's equator
       },
       {
         name: 'Europa',
         radius: 1560.8,
         orbitalRadius: 671034 / AU,
         orbitalPeriod: 3.551,
+        inclination: 0.47, // degrees to Jupiter's equator
       },
       {
         name: 'Ganymede',
         radius: 2634.1,
         orbitalRadius: 1070412 / AU,
         orbitalPeriod: 7.155,
+        inclination: 0.20, // degrees to Jupiter's equator
       },
       {
         name: 'Callisto',
         radius: 2410.3,
         orbitalRadius: 1882709 / AU,
         orbitalPeriod: 16.689,
+        inclination: 0.51, // degrees to Jupiter's equator
       },
     ],
   },
@@ -154,12 +161,14 @@ export const PLANETS: PlanetData[] = [
         radius: 2574.7,
         orbitalRadius: 1221700 / AU,
         orbitalPeriod: 15.945,
+        inclination: 0.34, // degrees to Saturn's equator
       },
       {
         name: 'Enceladus',
         radius: 252.1,
         orbitalRadius: 238000 / AU,
         orbitalPeriod: 1.370,
+        inclination: 0.02, // degrees to Saturn's equator
       },
     ],
   },
@@ -200,6 +209,7 @@ export const PLANETS: PlanetData[] = [
         radius: 1353.4,
         orbitalRadius: 354800 / AU,
         orbitalPeriod: -5.877, // Negative for retrograde
+        inclination: 156.885, // degrees to Neptune's equator (highly inclined retrograde orbit)
       },
     ],
   },

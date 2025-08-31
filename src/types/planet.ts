@@ -25,6 +25,7 @@ export interface MoonData {
   radius: number;
   orbitalRadius: number;
   orbitalPeriod: number;
+  inclination?: number; // degrees - orbital inclination relative to planet's equatorial plane
 }
 
 export interface RingData {
