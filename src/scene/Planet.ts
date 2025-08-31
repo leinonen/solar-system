@@ -120,14 +120,26 @@ export class Planet {
       const texturePath = `/textures/${moonData.name.toLowerCase()}.jpg`;
       
       let material: THREE.Material;
+      let textureLoaded = false;
+      
+      // Create fallback material for moons - greyish rocky appearance
+      const fallbackMaterial = new THREE.MeshLambertMaterial({
+        color: 0xaaaaaa, // Light grey base color
+        emissive: 0x222222, // Slight warm glow to avoid pure black
+      });
       
       try {
         const texture = textureLoader.load(
           texturePath,
-          undefined,
+          () => {
+            // onLoad - texture loaded successfully
+            textureLoaded = true;
+          },
           undefined,
           () => {
-            console.warn(`Texture not found for ${moonData.name}, using color fallback`);
+            // onError - texture failed to load, use fallback
+            console.warn(`Texture not found for ${moonData.name}, using grey fallback material`);
+            moon.material = fallbackMaterial;
           }
         );
         
@@ -136,10 +148,7 @@ export class Planet {
           color: 0xffffff,
         });
       } catch (error) {
-        material = new THREE.MeshLambertMaterial({
-          color: 0xcccccc,
-          emissive: 0x111111,
-        });
+        material = fallbackMaterial;
       }
       
       const moon = new THREE.Mesh(geometry, material);
