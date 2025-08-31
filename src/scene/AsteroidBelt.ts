@@ -6,7 +6,8 @@ export interface AsteroidData {
   rotationSpeed: THREE.Vector3;
   orbitalRadius: number;
   orbitalSpeed: number;
-  angle: number;
+  initialAngle: number;
+  inclination: number;
 }
 
 export class AsteroidBelt {
@@ -100,12 +101,29 @@ export class AsteroidBelt {
       // Random starting angle
       const angle = Math.random() * Math.PI * 2;
       
-      // Calculate position
+      // Generate inclination with realistic distribution
+      // Most asteroids have low inclinations (< 10 degrees)
+      // Use a normal-like distribution centered around 0
+      let inclination: number;
+      const inclinationRandom = Math.random();
+      if (inclinationRandom < 0.7) {
+        // 70% have low inclination (0-5 degrees)
+        inclination = (Math.random() - 0.5) * 10 * (Math.PI / 180);
+      } else if (inclinationRandom < 0.95) {
+        // 25% have moderate inclination (5-15 degrees)
+        inclination = (Math.random() - 0.5) * 30 * (Math.PI / 180);
+      } else {
+        // 5% have high inclination (15-30 degrees)
+        inclination = (Math.random() - 0.5) * 60 * (Math.PI / 180);
+      }
+      
+      // Calculate position with inclination
       const x = Math.cos(angle) * orbitalRadius;
       const z = Math.sin(angle) * orbitalRadius;
       
-      // Add vertical spread (belt has some thickness)
-      const y = (Math.random() - 0.5) * 4; // ±2 units vertical spread
+      // Apply inclination to y-coordinate
+      // The y-offset represents the height above/below the ecliptic plane
+      const y = Math.tan(inclination) * orbitalRadius;
       
       // Random scale (asteroids vary in size)
       const scale = 0.5 + Math.random() * 2; // 0.5x to 2.5x base size
@@ -117,16 +135,23 @@ export class AsteroidBelt {
         (Math.random() - 0.5) * 0.02
       );
       
-      // Orbital speed inversely related to distance (Kepler's laws)
-      const orbitalSpeed = 0.5 / Math.sqrt(orbitalRadius / 30); // Adjust for scene scale
+      // Calculate orbital period using Kepler's third law
+      // T² = a³ where T is in Earth years and a is in AU
+      const orbitalRadiusAU = orbitalRadius / 30; // Convert scene units to AU (30 scene units = 1 AU)
+      const orbitalPeriodYears = Math.sqrt(Math.pow(orbitalRadiusAU, 3));
+      const orbitalPeriodDays = orbitalPeriodYears * 365.256;
+      
+      // Calculate angular speed in radians per second (matching Planet.ts approach)
+      const orbitalSpeed = (2 * Math.PI) / (orbitalPeriodDays * 24 * 3600);
       
       this.asteroids.push({
         position: new THREE.Vector3(x, y, z),
         scale,
         rotationSpeed,
         orbitalRadius,
-        orbitalSpeed: orbitalSpeed * 0.0001, // Scale down for reasonable motion
-        angle
+        orbitalSpeed: orbitalSpeed, // radians per second
+        initialAngle: angle,
+        inclination
       });
     }
   }
@@ -149,7 +174,7 @@ export class AsteroidBelt {
     this.instancedMesh.instanceMatrix.needsUpdate = true;
   }
 
-  public update(delta: number, timeScale: number): void {
+  public update(delta: number, time: number): void {
     if (!this.isVisible) return;
 
     let needsUpdate = false;
@@ -158,16 +183,19 @@ export class AsteroidBelt {
     for (let i = 0; i < this.asteroids.length; i++) {
       const asteroid = this.asteroids[i];
       
-      // Update orbital position
-      asteroid.angle += asteroid.orbitalSpeed * delta * timeScale;
+      // Calculate current orbital angle based on time
+      const currentAngle = asteroid.initialAngle + time * asteroid.orbitalSpeed;
       
-      // Calculate new position
-      const x = Math.cos(asteroid.angle) * asteroid.orbitalRadius;
-      const z = Math.sin(asteroid.angle) * asteroid.orbitalRadius;
+      // Calculate new position with inclination
+      const x = Math.cos(currentAngle) * asteroid.orbitalRadius;
+      const z = Math.sin(currentAngle) * asteroid.orbitalRadius;
+      
+      // Maintain the inclination-based y-coordinate
+      const y = Math.tan(asteroid.inclination) * asteroid.orbitalRadius;
       
       asteroid.position.x = x;
+      asteroid.position.y = y;
       asteroid.position.z = z;
-      // Y position stays constant (vertical spread doesn't change)
       
       needsUpdate = true;
     }

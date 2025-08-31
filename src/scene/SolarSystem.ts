@@ -231,7 +231,7 @@ export class SolarSystem {
 
     // Update asteroid belt
     if (this.asteroidBelt) {
-      this.asteroidBelt.update(delta, this.timeScale);
+      this.asteroidBelt.update(delta, this.currentTime);
     }
     
     // Update orbit trails if in trail mode
