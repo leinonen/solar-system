@@ -13,7 +13,7 @@ export class SolarSystem {
   private orbits: THREE.Line[] = [];
   private moonOrbits: THREE.Line[] = [];
   private showOrbits: boolean = true;
-  private showMoonOrbits: boolean = true;
+  private showMoonOrbits: boolean = false;
   private orbitMode: 'static' | 'trails' = 'static';
   private moonOrbitMode: 'static' | 'trails' = 'static';
   private showDistanceLabels: boolean = false;
@@ -714,37 +714,20 @@ export class SolarSystem {
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geometry.setAttribute('opacity', new THREE.BufferAttribute(opacities, 1));
     
-    // Use the same shader material as planet orbits
-    const material = new THREE.ShaderMaterial({
-      vertexShader: `
-        attribute float opacity;
-        varying vec3 vColor;
-        varying float vOpacity;
-        
-        void main() {
-          vColor = color;
-          vOpacity = opacity;
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vColor;
-        varying float vOpacity;
-        
-        void main() {
-          gl_FragColor = vec4(vColor, vOpacity);
-        }
-      `,
-      vertexColors: true,
+    // Use LineBasicMaterial with proper depth settings
+    const material = new THREE.LineBasicMaterial({
+      color: 0x4db8ff,  // Cyan-blue color for moon orbits
       transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide
+      opacity: 0.6,
+      linewidth: 2,
+      depthWrite: false,  // Don't write to depth buffer (transparent object)
+      depthTest: true,    // Test depth for proper occlusion
+      depthFunc: THREE.LessEqualDepth  // Use less-equal depth function
     });
     
     const orbit = new THREE.Line(geometry, material);
-    orbit.renderOrder = 1; // Render after planets (default renderOrder is 0)
+    // Render after opaque objects
+    orbit.renderOrder = 10;  // High render order to ensure it's drawn after planets
     
     // Apply orbital inclination relative to the planet's equatorial plane
     if (moonData.inclination !== undefined) {
@@ -792,14 +775,16 @@ export class SolarSystem {
     const material = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.7,
-      linewidth: 1,
-      depthWrite: false,  // Don't write to depth buffer to avoid z-fighting
-      depthTest: true,    // Still test depth for proper ordering
+      opacity: 0.6,
+      linewidth: 2,
+      depthWrite: false,  // Don't write to depth buffer (transparent object)
+      depthTest: true,    // Test depth for proper occlusion
+      depthFunc: THREE.LessEqualDepth  // Use less-equal depth function
     });
     
     const orbit = new THREE.Line(geometry, material);
-    orbit.renderOrder = 1; // Render after planets (default renderOrder is 0)
+    // Render after opaque objects
+    orbit.renderOrder = 10;  // High render order to ensure it's drawn after planets
     
     // Apply orbital inclination relative to the planet's equatorial plane
     if (moonData.inclination !== undefined) {

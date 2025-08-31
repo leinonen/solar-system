@@ -94,6 +94,7 @@ export class Planet {
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
     this.mesh.userData = { planet: this };
+    this.mesh.renderOrder = 0;  // Ensure planets render first (opaque objects)
     
     // Create a tilted rotation group for all planets with significant tilt
     const axialTiltRad = THREE.MathUtils.degToRad(this.data.axialTilt);
