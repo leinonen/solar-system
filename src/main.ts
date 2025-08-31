@@ -265,6 +265,10 @@ class App {
     this.solarSystem.setShowMoons(show);
   }
 
+  public setShowMoonOrbits(show: boolean): void {
+    this.solarSystem.setShowMoonOrbits(show);
+  }
+
   public setShowAsteroidBelt(show: boolean): void {
     this.solarSystem.setShowAsteroidBelt(show);
   }

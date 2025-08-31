@@ -425,6 +425,15 @@ export class Planet {
     return this.group;
   }
 
+  public getMoonParent(): THREE.Group {
+    // Return the same coordinate system that moons are added to
+    return this.rotationGroup || this.group;
+  }
+
+  public getCurrentScale(): number {
+    return this.currentScale;
+  }
+
   public getMoons(): THREE.Mesh[] {
     return this.moons;
   }

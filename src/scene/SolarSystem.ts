@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Planet } from './Planet';
 import { AsteroidBelt } from './AsteroidBelt';
-import { PLANETS, SUN_DATA, getScaledRadius, getScaledOrbitRadius } from '../data/PlanetData';
+import { PLANETS, SUN_DATA, getScaledRadius, getScaledOrbitRadius, getScaledMoonOrbitRadius } from '../data/PlanetData';
 import { PlanetData } from '../types/planet';
 
 export class SolarSystem {
@@ -11,8 +11,11 @@ export class SolarSystem {
   private planets: Planet[] = [];
   private asteroidBelt!: AsteroidBelt;
   private orbits: THREE.Line[] = [];
+  private moonOrbits: THREE.Line[] = [];
   private showOrbits: boolean = true;
+  private showMoonOrbits: boolean = true;
   private orbitMode: 'static' | 'trails' = 'static';
+  private moonOrbitMode: 'static' | 'trails' = 'static';
   private showDistanceLabels: boolean = false;
   private showCoordinateSystem: boolean = false;
   private showEquinoxMarkers: boolean = false;
@@ -34,6 +37,7 @@ export class SolarSystem {
     this.createPlanets();
     this.createAsteroidBelt();
     this.createOrbits();
+    this.createMoonOrbits();
     this.createDistanceLabels();
     this.createCoordinateSystem();
   }
@@ -235,6 +239,16 @@ export class SolarSystem {
       this.updateOrbitTrails();
     }
     
+    // Update moon orbit trails if in trail mode
+    if (this.showMoonOrbits && this.moonOrbitMode === 'trails') {
+      this.updateMoonOrbitTrails();
+    }
+    
+    // Update moon orbit positions to follow their planets
+    if (this.showMoonOrbits) {
+      this.updateMoonOrbitPositions();
+    }
+    
     // Update static orbit shading based on camera position
     if (this.showOrbits && this.orbitMode === 'static' && this.camera) {
       this.updateStaticOrbitShading();
@@ -375,6 +389,87 @@ export class SolarSystem {
       }
       
       positionAttribute.needsUpdate = true;
+    });
+  }
+  
+  private updateMoonOrbitTrails(): void {
+    this.moonOrbits.forEach((orbit) => {
+      const userData = orbit.userData;
+      
+      // Only update orbits that are in trail mode
+      if (!userData || userData.mode !== 'trails') return;
+      
+      // Find the planet this moon orbit belongs to
+      const planet = this.planets.find(p => p.name === userData.planetName);
+      if (!planet) return;
+      
+      // Find the moon within this planet's moons
+      const planetData = planet.getPlanetData();
+      const moonIndex = planetData.moons?.findIndex(m => m.name === userData.moonName);
+      if (moonIndex === undefined || moonIndex < 0) return;
+      
+      const moons = planet.getMoons();
+      const moonMesh = moons[moonIndex];
+      if (!moonMesh) return;
+      
+      const geometry = orbit.geometry as THREE.BufferGeometry;
+      const positionAttribute = geometry.getAttribute('position') as THREE.BufferAttribute;
+      
+      if (!positionAttribute) return;
+      
+      // Get current moon position relative to planet (orbit is in planet's local space)
+      const moonLocalPos = moonMesh.position.clone();
+      
+      // Initialize trail points array if it doesn't exist
+      if (!userData.trailPoints || userData.trailPoints.length === 0) {
+        userData.trailPoints = [];
+        for (let i = 0; i < userData.trailLength; i++) {
+          userData.trailPoints.push(moonLocalPos.clone());
+        }
+      }
+      
+      // Add current moon position to the beginning of the trail
+      userData.trailPoints.unshift(moonLocalPos.clone());
+      
+      // Keep only the specified trail length
+      if (userData.trailPoints.length > userData.trailLength) {
+        userData.trailPoints = userData.trailPoints.slice(0, userData.trailLength);
+      }
+      
+      // Update the geometry with the trail points
+      const positions = positionAttribute.array as Float32Array;
+      for (let i = 0; i < Math.min(userData.trailPoints.length, userData.trailLength); i++) {
+        const point = userData.trailPoints[i];
+        positions[i * 3] = point.x;
+        positions[i * 3 + 1] = point.y;
+        positions[i * 3 + 2] = point.z;
+      }
+      
+      positionAttribute.needsUpdate = true;
+    });
+  }
+  
+  private updateMoonOrbitPositions(): void {
+    this.moonOrbits.forEach((orbit) => {
+      const planet = orbit.userData.planet;
+      if (!planet) return;
+      
+      // Get planet's world position and rotation
+      const planetGroup = planet.getGroup();
+      const moonParent = planet.getMoonParent();
+      
+      // Copy planet group's position
+      orbit.position.copy(planetGroup.position);
+      
+      // Copy the moon coordinate system's rotation (handles planet axial tilt)
+      orbit.rotation.copy(moonParent.rotation);
+      
+      // Re-apply moon orbit inclination on top of planet's rotation
+      const moonData = planet.getPlanetData().moons?.find(m => m.name === orbit.userData.moonName);
+      if (moonData && moonData.inclination !== undefined) {
+        const inclinationRad = THREE.MathUtils.degToRad(moonData.inclination);
+        orbit.rotation.x += inclinationRad;
+      }
     });
   }
   
@@ -569,6 +664,166 @@ export class SolarSystem {
     this.scene.add(orbit);
   }
 
+  private createMoonOrbits(): void {
+    this.planets.forEach((planet) => {
+      const planetData = planet.getPlanetData();
+      if (!planetData.moons) return;
+
+      planetData.moons.forEach((moonData) => {
+        const moonOrbitRadius = getScaledMoonOrbitRadius(moonData.orbitalRadius, planet.name) * planet.getCurrentScale();
+        
+        if (this.moonOrbitMode === 'static') {
+          this.createStaticMoonOrbit(moonData, moonOrbitRadius, planet);
+        } else {
+          this.createTrailMoonOrbit(moonData, moonOrbitRadius, planet);
+        }
+      });
+    });
+  }
+
+  private createStaticMoonOrbit(moonData: any, orbitRadius: number, planet: Planet): void {
+    const segments = 100;
+    
+    // Create points for the full orbit around the planet in the equatorial plane
+    const orbitPoints = [];
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * orbitRadius;
+      const z = Math.sin(angle) * orbitRadius;
+      const y = 0; // Always start in equatorial plane
+      
+      orbitPoints.push(new THREE.Vector3(x, y, z));
+    }
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+    
+    // Create a slightly different color for moon orbits to distinguish them
+    const colors = new Float32Array(orbitPoints.length * 3);
+    const opacities = new Float32Array(orbitPoints.length);
+    
+    for (let i = 0; i < orbitPoints.length; i++) {
+      // Moon orbits use a more cyan/blue color to distinguish from planet orbits
+      colors[i * 3] = 0.3;     // Red
+      colors[i * 3 + 1] = 0.7; // Green  
+      colors[i * 3 + 2] = 0.9; // Blue
+      
+      // Consistent opacity for moon orbits
+      opacities[i] = 0.6;
+    }
+    
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('opacity', new THREE.BufferAttribute(opacities, 1));
+    
+    // Use the same shader material as planet orbits
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `
+        attribute float opacity;
+        varying vec3 vColor;
+        varying float vOpacity;
+        
+        void main() {
+          vColor = color;
+          vOpacity = opacity;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        varying float vOpacity;
+        
+        void main() {
+          gl_FragColor = vec4(vColor, vOpacity);
+        }
+      `,
+      vertexColors: true,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    
+    const orbit = new THREE.Line(geometry, material);
+    orbit.renderOrder = 1; // Render after planets (default renderOrder is 0)
+    
+    // Apply orbital inclination relative to the planet's equatorial plane
+    if (moonData.inclination !== undefined) {
+      const inclinationRad = THREE.MathUtils.degToRad(moonData.inclination);
+      orbit.rotation.x = inclinationRad; // Rotate around X-axis to tilt the orbit
+      // Orbit tilted by ${moonData.inclination}° relative to planet's equator
+    }
+    
+    orbit.userData = { 
+      orbitRadius: orbitRadius,
+      moonName: moonData.name,
+      planetName: planet.name,
+      mode: 'static',
+      planet: planet  // Store planet reference for positioning
+    };
+    
+    // Add directly to scene to avoid planet rendering order issues
+    this.scene.add(orbit);
+    
+    orbit.visible = this.showMoonOrbits;
+    this.moonOrbits.push(orbit);
+  }
+
+  private createTrailMoonOrbit(moonData: any, orbitRadius: number, planet: Planet): void {
+    const trailLength = 40; // Shorter trails for moons
+    
+    // Create initial trail points
+    const trailPoints = [];
+    for (let i = 0; i < trailLength; i++) {
+      trailPoints.push(new THREE.Vector3(0, 0, 0));
+    }
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+    
+    // Initialize vertex colors for trail effect
+    const colors = new Float32Array(trailLength * 3);
+    for (let i = 0; i < trailLength; i++) {
+      const alpha = 1.0 - (i / trailLength);
+      colors[i * 3] = alpha * 0.3;     // Red (cyan tint)
+      colors[i * 3 + 1] = alpha * 0.7; // Green
+      colors[i * 3 + 2] = alpha * 0.9; // Blue
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    const material = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.7,
+      linewidth: 1,
+      depthWrite: false,  // Don't write to depth buffer to avoid z-fighting
+      depthTest: true,    // Still test depth for proper ordering
+    });
+    
+    const orbit = new THREE.Line(geometry, material);
+    orbit.renderOrder = 1; // Render after planets (default renderOrder is 0)
+    
+    // Apply orbital inclination relative to the planet's equatorial plane
+    if (moonData.inclination !== undefined) {
+      const inclinationRad = THREE.MathUtils.degToRad(moonData.inclination);
+      orbit.rotation.x = inclinationRad; // Rotate around X-axis to tilt the orbit
+    }
+    
+    orbit.userData = { 
+      orbitRadius: orbitRadius,
+      moonName: moonData.name,
+      planetName: planet.name,
+      trailLength: trailLength,
+      trailPoints: [],
+      mode: 'trails',
+      planet: planet  // Store planet reference for positioning
+    };
+    
+    // Add directly to scene to avoid planet rendering order issues
+    this.scene.add(orbit);
+    
+    orbit.visible = this.showMoonOrbits;
+    this.moonOrbits.push(orbit);
+  }
+
   public setShowDistanceLabels(show: boolean): void {
     this.showDistanceLabels = show;
     this.distanceLabels.forEach(label => {
@@ -635,6 +890,33 @@ export class SolarSystem {
     this.planets.forEach(planet => {
       planet.setShowMoons(show);
     });
+  }
+
+  public setShowMoonOrbits(show: boolean): void {
+    this.showMoonOrbits = show;
+    this.moonOrbits.forEach(orbit => {
+      orbit.visible = show;
+    });
+  }
+
+  public setMoonOrbitMode(mode: 'static' | 'trails'): void {
+    this.moonOrbitMode = mode;
+    this.recreateMoonOrbits();
+  }
+
+  private recreateMoonOrbits(): void {
+    // Remove existing moon orbits from the scene
+    this.moonOrbits.forEach(orbit => {
+      this.scene.remove(orbit);
+      if (orbit.geometry) orbit.geometry.dispose();
+      if (orbit.material && 'dispose' in orbit.material) {
+        (orbit.material as THREE.Material).dispose();
+      }
+    });
+    this.moonOrbits = [];
+    
+    // Create new moon orbits with current mode
+    this.createMoonOrbits();
   }
 
   public setShowAsteroidBelt(show: boolean): void {

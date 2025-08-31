@@ -3,6 +3,7 @@ interface AppInterface {
   setOrbitMode(mode: 'static' | 'trails'): void;
   setShowLabels(show: boolean): void;
   setShowMoons(show: boolean): void;
+  setShowMoonOrbits(show: boolean): void;
   setShowAsteroidBelt(show: boolean): void;
   setShowMilkyWay(show: boolean): void;
   setShowDistanceLabels(show: boolean): void;
@@ -25,6 +26,7 @@ export class Settings {
   private orbitModeSelect: HTMLSelectElement | null;
   private showLabelsCheckbox: HTMLInputElement | null;
   private showMoonsCheckbox: HTMLInputElement | null;
+  private showMoonOrbitsCheckbox: HTMLInputElement | null;
   private showAsteroidBeltCheckbox: HTMLInputElement | null;
   private showMilkyWayCheckbox: HTMLInputElement | null;
   private showDistanceLabelsCheckbox: HTMLInputElement | null;
@@ -49,6 +51,7 @@ export class Settings {
     this.orbitModeSelect = document.getElementById('orbit-mode') as HTMLSelectElement;
     this.showLabelsCheckbox = document.getElementById('show-labels') as HTMLInputElement;
     this.showMoonsCheckbox = document.getElementById('show-moons') as HTMLInputElement;
+    this.showMoonOrbitsCheckbox = document.getElementById('show-moon-orbits') as HTMLInputElement;
     this.showAsteroidBeltCheckbox = document.getElementById('show-asteroid-belt') as HTMLInputElement;
     this.showMilkyWayCheckbox = document.getElementById('show-milkyway') as HTMLInputElement;
     this.showDistanceLabelsCheckbox = document.getElementById('show-distance-labels') as HTMLInputElement;
@@ -88,6 +91,13 @@ export class Settings {
       this.showMoonsCheckbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
         this.app.setShowMoons(target.checked);
+      });
+    }
+
+    if (this.showMoonOrbitsCheckbox) {
+      this.showMoonOrbitsCheckbox.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        this.app.setShowMoonOrbits(target.checked);
       });
     }
 
