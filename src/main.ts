@@ -90,7 +90,7 @@ class App {
   }
 
   private setupLights(): void {
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.2);
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     this.scene.add(ambientLight);
   }
 
