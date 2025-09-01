@@ -31,7 +31,6 @@ export class SolarSystem {
   private earthSeasonIndicator?: THREE.Group;
   private lastEarthAngle: number = -1;
   private distanceLabels: THREE.Sprite[] = [];
-  private distanceLines: THREE.Line[] = [];
   private timeScale: number = 1;
   private currentTime: number = 0;
   private referenceJD: number = 2451545.0; // J2000.0 epoch
@@ -229,72 +228,51 @@ export class SolarSystem {
       const middleRadius = (innerRadius + outerRadius) / 2;
       
       // Convert distance back to AU for display
-      // With progressive scaling, we need to calculate based on the actual orbital radii
+      // With power-law scaling, we need to calculate based on the actual orbital radii
       const innerPlanet = PLANETS.find(p => getScaledOrbitRadius(p.orbitalRadius) === innerRadius);
       const outerPlanet = PLANETS.find(p => getScaledOrbitRadius(p.orbitalRadius) === outerRadius);
       const distanceAU = outerPlanet ? outerPlanet.orbitalRadius : distance / 50; // fallback to approximate
       
-      // Create text canvas
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d')!;
-      canvas.width = 256;
-      canvas.height = 64;
+      // Create multiple labels distributed around the orbital plane
+      const numLabels = Math.max(2, Math.floor(middleRadius / 50)); // More labels for larger orbits
+      const angleStep = (Math.PI * 2) / numLabels;
       
-      // Draw text
-      context.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      context.font = 'bold 20px Arial';
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText(`${distanceAU.toFixed(2)} AU`, 128, 32);
-      
-      // Create sprite material
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMaterial = new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true,
-        depthTest: false,
-      });
-      
-      // Create sprite and position it
-      const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(8, 2, 1);
-      sprite.position.set(middleRadius, 2, 0); // Slightly above the orbital plane
-      sprite.visible = this.showDistanceLabels;
-      
-      this.distanceLabels.push(sprite);
-      this.scene.add(sprite);
-      
-      // Create line between orbits
-      const lineGeometry = new THREE.BufferGeometry();
-      const linePoints = [
-        new THREE.Vector3(innerRadius, 0, 0),
-        new THREE.Vector3(outerRadius, 0, 0)
-      ];
-      lineGeometry.setFromPoints(linePoints);
-      
-      const lineMaterial = new THREE.LineBasicMaterial({
-        color: 0x888888,
-        transparent: true,
-        opacity: 0.6,
-      });
-      
-      const line = new THREE.Line(lineGeometry, lineMaterial);
-      line.visible = this.showDistanceLabels;
-      
-      this.distanceLines.push(line);
-      this.scene.add(line);
-      
-      // Create arrow at the end of the line
-      const arrowGeometry = new THREE.ConeGeometry(0.5, 2, 8);
-      const arrowMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 });
-      const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
-      arrow.position.set(outerRadius - 1, 0, 0);
-      arrow.rotation.z = -Math.PI / 2; // Point right
-      arrow.visible = this.showDistanceLabels;
-      
-      // Store as any to avoid type conflict with Line array
-      (this.distanceLines as any[]).push(arrow);
-      this.scene.add(arrow);
+      for (let j = 0; j < numLabels; j++) {
+        const angle = j * angleStep + (i * 0.3); // Offset each ring slightly
+        const labelX = Math.cos(angle) * middleRadius;
+        const labelZ = Math.sin(angle) * middleRadius;
+        
+        // Create text canvas
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d')!;
+        canvas.width = 256;
+        canvas.height = 64;
+        
+        // Draw text
+        context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        context.font = 'bold 20px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(`${distanceAU.toFixed(2)} AU`, 128, 32);
+        
+        // Create sprite material
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          depthTest: false,
+        });
+        
+        // Create sprite and position it
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.scale.set(8, 2, 1); // Initial scale - will be updated dynamically
+        sprite.position.set(labelX, 2, labelZ); // Distributed around the orbital plane
+        sprite.visible = this.showDistanceLabels;
+        sprite.userData = { baseScale: 8, orbitRadius: middleRadius }; // Store base scale for dynamic scaling
+        
+        this.distanceLabels.push(sprite);
+        this.scene.add(sprite);
+      }
     }
   }
 
@@ -335,6 +313,11 @@ export class SolarSystem {
     // Update static orbit shading based on camera position
     if (this.showOrbits && this.orbitMode === 'static' && this.camera) {
       this.updateStaticOrbitShading();
+    }
+    
+    // Update distance label scaling based on camera position
+    if (this.showDistanceLabels && this.camera) {
+      this.updateDistanceLabelScaling();
     }
     
     // Update Earth season indicator
@@ -555,6 +538,40 @@ export class SolarSystem {
       }
       
       // Inclination is already applied to the orbit points in createStaticMoonOrbit
+    });
+  }
+  
+  private updateDistanceLabelScaling(): void {
+    if (!this.camera) return;
+    
+    const cameraPos = this.camera.position;
+    const cameraDistFromSun = Math.sqrt(
+      cameraPos.x * cameraPos.x + 
+      cameraPos.y * cameraPos.y + 
+      cameraPos.z * cameraPos.z
+    );
+    
+    // Dynamic scale factor based on camera distance
+    // When viewing the whole system (far away), make labels bigger
+    // When zoomed in close, make labels smaller for readability
+    const minCameraDist = 100; // Minimum distance threshold
+    const maxCameraDist = 1000; // Maximum distance for scaling
+    
+    // Calculate scale multiplier (1x to 4x based on camera distance)
+    const distanceRatio = Math.min(Math.max((cameraDistFromSun - minCameraDist) / (maxCameraDist - minCameraDist), 0), 1);
+    const scaleMultiplier = 1 + (distanceRatio * 3); // Scale from 1x to 4x
+    
+    this.distanceLabels.forEach(label => {
+      if (label.userData && label.userData.baseScale) {
+        const baseScale = label.userData.baseScale;
+        const orbitRadius = label.userData.orbitRadius;
+        
+        // Additional scaling based on orbit size - outer labels can be bigger
+        const orbitScaleFactor = Math.max(1, orbitRadius / 100);
+        const finalScale = baseScale * scaleMultiplier * Math.min(orbitScaleFactor, 2);
+        
+        label.scale.set(finalScale, finalScale * 0.25, 1); // Keep aspect ratio with height smaller
+      }
     });
   }
   
@@ -908,9 +925,6 @@ export class SolarSystem {
     this.showDistanceLabels = show;
     this.distanceLabels.forEach(label => {
       label.visible = show;
-    });
-    this.distanceLines.forEach(line => {
-      line.visible = show;
     });
   }
 
