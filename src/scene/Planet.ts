@@ -569,6 +569,8 @@ export class Planet {
     this.referenceJD = julianDay;
     this.initialOrbitAngle = this.calculateOrbitAngleForDate(julianDay);
     this.orbitAngle = this.initialOrbitAngle;
+    // Immediately update position to reflect the new date
+    this.updatePosition(0);
   }
 
   public setEnableShadows(enable: boolean): void {
