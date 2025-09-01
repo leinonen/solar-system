@@ -263,22 +263,16 @@ export function getScaledRadius(radius: number, isSun: boolean = false): number 
 }
 
 export function getScaledOrbitRadius(auDistance: number): number {
-  // Progressive scaling system to make the scene feel larger and more expansive
-  // Inner planets get moderate scaling, outer planets get increasingly larger scaling
+  // Power-law scaling for realistic solar system proportions
+  // Provides smooth compression that maintains relative distances while keeping
+  // the outer planets at manageable distances for navigation
   
-  if (auDistance <= 1.5) { // Mercury, Venus, Earth, Mars
-    return auDistance * 50; // 50 units per AU for inner planets
-  } else if (auDistance <= 2.0) { // Mars outer range
-    return auDistance * 60; // Slightly more spacing for Mars
-  } else if (auDistance <= 6.0) { // Jupiter region
-    return auDistance * 80; // Expanded spacing for gas giants
-  } else if (auDistance <= 10.0) { // Saturn region
-    return auDistance * 100; // Even more spacing for Saturn
-  } else if (auDistance <= 20.0) { // Uranus region
-    return auDistance * 120; // Large spacing for ice giants
-  } else { // Neptune and beyond
-    return auDistance * 150; // Maximum spacing for outer solar system
-  }
+  const baseScale = 50; // Units - maintains Earth at ~50 units
+  const exponent = 0.8; // Compression factor: 0.6 = more compressed, 0.8 = less compressed, 1.0 = linear
+  
+  // Power-law formula: distance = baseScale * (auDistance^exponent)
+  // This creates smooth compression without artificial breakpoints
+  return baseScale * Math.pow(auDistance, exponent);
 }
 
 export function getScaledMoonRadius(radius: number): number {
@@ -289,62 +283,101 @@ export function getScaledMoonRadius(radius: number): number {
 }
 
 export function getScaledMoonOrbitRadius(radiusAU: number, planetName: string): number {
-  // Compromise between realism and visibility
-  // Ensure moons orbit outside their parent planet while avoiding planetary collisions
-  // Use the same progressive scaling as planetary orbits for consistency
+  // Realistic proportional scaling with compressed distances for visualization
+  // Maintains realistic orbital ratios while keeping distances manageable for the scene
   
-  // First get the planet's AU distance to determine which scaling tier to use
   const planet = PLANETS.find(p => p.name === planetName);
-  const planetAU = planet ? planet.orbitalRadius : 1.0;
+  if (!planet) {
+    return Math.max(1.0, radiusAU * 50);
+  }
   
-  // Apply the same progressive scaling as planetary orbits
+  // Get planet's scaled radius for collision calculations
+  const planetRadius = getScaledRadius(planet.radius);
+  
+  // Calculate realistic orbital distance in planet radii
+  const orbitRadiusKm = radiusAU * AU; // Convert AU to km
+  const orbitInPlanetRadii = orbitRadiusKm / planet.radius;
+  
+  // Use a compressed scaling system similar to planetary orbits
+  // This maintains proportions while keeping distances reasonable
   let baseScale: number;
-  if (planetAU <= 1.5) {
+  
+  // Determine base scale based on planet's position in solar system
+  const planetAU = planet.orbitalRadius;
+  if (planetAU <= 1.5) { // Inner planets: Earth, Mars
     baseScale = 50;
-  } else if (planetAU <= 2.0) {
-    baseScale = 60;
-  } else if (planetAU <= 6.0) {
+  } else if (planetAU <= 6.0) { // Jupiter region
     baseScale = 80;
-  } else if (planetAU <= 10.0) {
+  } else if (planetAU <= 10.0) { // Saturn region  
     baseScale = 100;
-  } else if (planetAU <= 20.0) {
+  } else if (planetAU <= 20.0) { // Uranus region
     baseScale = 120;
-  } else {
+  } else { // Neptune and beyond
     baseScale = 150;
   }
   
-  const realisticRadius = radiusAU * baseScale;
+  // Calculate compressed orbital radius
+  const compressedOrbitRadius = radiusAU * baseScale;
+  
+  // Apply planet-specific visibility adjustments while maintaining proportions
+  let visibilityMultiplier: number;
   
   if (planetName === 'Earth') {
-    // Earth's moon: ensure it orbits outside Earth's radius with some margin
-    // Earth radius = 1 unit, so minimum orbit = 1.5 units
-    return Math.max(1.5, realisticRadius);
+    // Earth's moon: keep existing good scaling
+    visibilityMultiplier = 1.0;
+    const minOrbit = planetRadius + 0.5; // Safety margin
+    return Math.max(minOrbit, compressedOrbitRadius);
+    
   } else if (planetName === 'Mars') {
-    // Mars radius ≈ 0.53 units, scale moons proportionally but ensure they're outside the planet
-    // Phobos and Deimos are very close to Mars, so we need to scale them up for visibility
-    const scaledRadius = realisticRadius * 1000; // Scale up by 1000 for visibility
-    return Math.max(0.8, scaledRadius);
+    // Mars moons are extremely close - need significant scaling for visibility
+    // But maintain proportional relationships between Phobos and Deimos
+    visibilityMultiplier = orbitInPlanetRadii < 5 ? 400 : 300; // Scale up small orbits more
+    
   } else if (planetName === 'Jupiter') {
-    // Jupiter radius ≈ 11 units, scale moons proportionally but ensure they're outside the planet
-    // Jupiter's moons are relatively close, so we need to scale them up for visibility and separation
-    const scaledRadius = realisticRadius * 150; // Scale up by 150 for visibility
-    return Math.max(12, scaledRadius);
+    // Jupiter moons: progressive scaling based on distance
+    if (orbitInPlanetRadii < 10) {
+      visibilityMultiplier = 30; // Inner moons need more scaling
+    } else if (orbitInPlanetRadii < 20) {
+      visibilityMultiplier = 25;
+    } else {
+      visibilityMultiplier = 20; // Outer moons need less scaling
+    }
+    
   } else if (planetName === 'Saturn') {
-    // Saturn radius ≈ 9.1 units, scale moons proportionally but ensure they're outside the planet
-    // Saturn's moons need scaling up for visibility and separation
-    const scaledRadius = realisticRadius * 200; // Scale up by 200 for visibility
-    return Math.max(10, scaledRadius);
+    // Saturn moons: moderate scaling
+    if (orbitInPlanetRadii < 10) {
+      visibilityMultiplier = 20;
+    } else {
+      visibilityMultiplier = 8;
+    }
+    
   } else if (planetName === 'Uranus') {
-    // Uranus radius ≈ 4 units, scale moons proportionally but ensure they're outside the planet
-    const scaledRadius = realisticRadius * 150; // Scale up for visibility
-    return Math.max(5, scaledRadius);
+    // Uranus moons: high scaling needed to prevent collisions due to close orbits
+    visibilityMultiplier = orbitInPlanetRadii < 10 ? 60 : 35;
+    
   } else if (planetName === 'Neptune') {
-    // Neptune radius ≈ 3.86 units, scale moons proportionally but ensure they're outside the planet
-    // Triton needs significant scaling up for visibility
-    const scaledRadius = realisticRadius * 250; // Scale up by 250 for visibility
-    return Math.max(6, scaledRadius);
+    // Neptune Triton: moderate scaling
+    visibilityMultiplier = 12;
+    
   } else {
-    // For other planets, use minimum safe distance
-    return Math.max(1.0, realisticRadius);
+    // Default case
+    visibilityMultiplier = 1.0;
   }
+  
+  // Apply visibility scaling to compressed orbit
+  const scaledOrbitRadius = compressedOrbitRadius * visibilityMultiplier;
+  
+  // Calculate minimum safe orbit to prevent collision
+  let maxMoonRadius = 0;
+  if (planet.moons) {
+    planet.moons.forEach(moon => {
+      const moonRadius = getScaledMoonRadius(moon.radius);
+      maxMoonRadius = Math.max(maxMoonRadius, moonRadius);
+    });
+  }
+  
+  const safetyMargin = 0.2; // Reduced visual separation margin for better proportions
+  const minSafeOrbit = planetRadius + maxMoonRadius + safetyMargin;
+  
+  return Math.max(minSafeOrbit, scaledOrbitRadius);
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getScaledOrbitRadius } from '../data/PlanetData';
 
 export interface AsteroidData {
   position: THREE.Vector3;
@@ -26,9 +27,9 @@ export class AsteroidBelt {
     
     // Asteroid belt is between Mars (1.524 AU) and Jupiter (5.204 AU)
     // Main belt spans roughly 2.2 to 3.3 AU
-    // Use progressive scaling matching planet orbits (2.2-3.3 AU falls in 60-80 range)
-    this.innerRadius = 2.2 * 80; // Convert AU to scene units using gas giant scaling
-    this.outerRadius = 3.3 * 80;
+    // Use power-law scaling to match planetary orbits
+    this.innerRadius = getScaledOrbitRadius(2.2); // Inner edge of main belt
+    this.outerRadius = getScaledOrbitRadius(3.3); // Outer edge of main belt
     
     this.createAsteroidBelt();
   }
