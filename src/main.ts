@@ -7,6 +7,7 @@ import { TimeControls } from './ui/TimeControls';
 import { Settings } from './ui/Settings';
 import { Labels } from './ui/Labels';
 import { Selection } from './ui/Selection';
+import { About } from './ui/About';
 
 class App {
   private scene: THREE.Scene;
@@ -20,6 +21,7 @@ class App {
   private settings: Settings;
   private labels: Labels;
   private selection: Selection;
+  private about: About;
   private clock: THREE.Clock;
   private raycaster: THREE.Raycaster;
   private mouse: THREE.Vector2;
@@ -45,6 +47,7 @@ class App {
     this.settings = new Settings(this.solarSystem, this);
     this.labels = new Labels(this.solarSystem, this.camera, this.renderer);
     this.selection = new Selection(this.solarSystem, this.camera);
+    this.about = new About();
     
     this.labels.setOnPlanetClick((planetName: string) => {
       this.selection.selectPlanet(planetName);

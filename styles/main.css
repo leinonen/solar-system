@@ -210,6 +210,95 @@ body {
   background: #0077cc;
 }
 
+#about {
+  bottom: 20px;
+  left: 20px;
+}
+
+#about-toggle {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.about-modal {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: rgba(20, 20, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 0;
+  backdrop-filter: blur(15px);
+  max-width: 400px;
+  max-height: 80vh;
+  width: 90vw;
+  z-index: 1000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+}
+
+.about-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 20px 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.about-header h3 {
+  margin: 0;
+  color: #0099ff;
+  font-size: 20px;
+}
+
+#about-close {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+#about-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.about-body {
+  padding: 20px;
+}
+
+.about-body p {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.about-body p:last-child {
+  margin-bottom: 0;
+}
+
+.about-note {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 15px;
+  margin-top: 15px;
+}
+
 #view-controls {
   top: 20px;
   left: 50%;

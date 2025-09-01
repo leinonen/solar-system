@@ -107,6 +107,30 @@
       <span id="spacemouse-indicator">🖱️ SpaceMouse: <span id="spacemouse-state">Not Connected</span></span>
       <button id="connect-spacemouse" class="hidden">Connect SpaceMouse</button>
     </div>
+    
+    <div id="about" class="panel">
+      <button id="about-toggle">ℹ️</button>
+    </div>
+    
+    <div id="about-content" class="hidden about-modal">
+      <div class="about-header">
+        <h3>3D Solar System Simulator</h3>
+        <button id="about-close">×</button>
+      </div>
+      <div class="about-body">
+        <p><strong>Created by:</strong><br>
+        Peter Leinonen<br>
+        together with Claude Code</p>
+        
+        <p><strong>Data & Textures:</strong><br>
+        NASA (National Aeronautics and Space Administration)</p>
+        
+        <p><strong>Technology:</strong><br>
+        Three.js, TypeScript, WebGL</p>
+        
+        <p class="about-note">This interactive solar system visualization provides real planetary positions and orbital mechanics. Use your mouse, keyboard, or SpaceMouse for navigation.</p>
+      </div>
+    </div>
   </div>
   
   <script type="module" src="/src/main.ts"></script>
