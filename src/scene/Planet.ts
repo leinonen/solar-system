@@ -385,7 +385,8 @@ export class Planet {
     this.moons.forEach((moon, index) => {
       if (this.data.moons) {
         const moonData = this.data.moons[index];
-        const moonOrbitSpeed = (2 * Math.PI) / (Math.abs(moonData.orbitalPeriod) * 24 * 3600);
+        // Preserve the sign for retrograde orbits (negative period means retrograde)
+        const moonOrbitSpeed = (2 * Math.PI) / (moonData.orbitalPeriod * 24 * 3600);
         const moonAngle = time * moonOrbitSpeed;
         const moonOrbitRadius = getScaledMoonOrbitRadius(moonData.orbitalRadius, this.name) * this.currentScale;
         

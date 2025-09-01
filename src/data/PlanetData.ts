@@ -297,6 +297,15 @@ export function getScaledMoonOrbitRadius(radiusAU: number, planetName: string): 
     // Saturn's moons need scaling up for visibility and separation
     const scaledRadius = realisticRadius * 200; // Scale up by 200 for visibility
     return Math.max(10, scaledRadius);
+  } else if (planetName === 'Uranus') {
+    // Uranus radius ≈ 4 units, scale moons proportionally but ensure they're outside the planet
+    const scaledRadius = realisticRadius * 150; // Scale up for visibility
+    return Math.max(5, scaledRadius);
+  } else if (planetName === 'Neptune') {
+    // Neptune radius ≈ 3.86 units, scale moons proportionally but ensure they're outside the planet
+    // Triton needs significant scaling up for visibility
+    const scaledRadius = realisticRadius * 250; // Scale up by 250 for visibility
+    return Math.max(6, scaledRadius);
   } else {
     // For other planets, use minimum safe distance
     return Math.max(1.0, realisticRadius);

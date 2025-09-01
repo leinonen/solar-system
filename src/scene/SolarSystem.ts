@@ -544,15 +544,17 @@ export class SolarSystem {
       // Copy planet group's position
       orbit.position.copy(planetGroup.position);
       
-      // Copy the moon coordinate system's rotation (handles planet axial tilt)
-      orbit.rotation.copy(moonParent.rotation);
+      // The orbit geometry already has inclination baked in,
+      // so we only need to apply the planet's axial tilt
+      orbit.rotation.set(0, 0, 0);
       
-      // Re-apply moon orbit inclination on top of planet's rotation
-      const moonData = planet.getPlanetData().moons?.find(m => m.name === orbit.userData.moonName);
-      if (moonData && moonData.inclination !== undefined) {
-        const inclinationRad = THREE.MathUtils.degToRad(moonData.inclination);
-        orbit.rotation.x += inclinationRad;
+      // Copy the parent's rotation (planet's axial tilt if it exists)
+      if (moonParent !== planetGroup) {
+        // The moonParent is the rotationGroup which has the axial tilt (rotation around Z)
+        orbit.rotation.z = moonParent.rotation.z;
       }
+      
+      // Inclination is already applied to the orbit points in createStaticMoonOrbit
     });
   }
   
@@ -767,15 +769,30 @@ export class SolarSystem {
   private createStaticMoonOrbit(moonData: any, orbitRadius: number, planet: Planet): void {
     const segments = 100;
     
-    // Create points for the full orbit around the planet in the equatorial plane
+    // Create points for the full orbit, applying inclination transformation to match moon position calculation
     const orbitPoints = [];
+    const inclinationRad = moonData.inclination !== undefined ? THREE.MathUtils.degToRad(moonData.inclination) : 0;
+    
     for (let i = 0; i <= segments; i++) {
       const angle = (i / segments) * Math.PI * 2;
       const x = Math.cos(angle) * orbitRadius;
+      const y = 0;
       const z = Math.sin(angle) * orbitRadius;
-      const y = 0; // Always start in equatorial plane
       
-      orbitPoints.push(new THREE.Vector3(x, y, z));
+      // Apply the same inclination transformation as in Planet.ts moon position calculation
+      let finalX, finalY, finalZ;
+      if (inclinationRad !== 0) {
+        // Rotate the orbit around the X-axis to tilt relative to equatorial plane
+        finalX = x;
+        finalY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
+        finalZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
+      } else {
+        finalX = x;
+        finalY = y;
+        finalZ = z;
+      }
+      
+      orbitPoints.push(new THREE.Vector3(finalX, finalY, finalZ));
     }
     
     const geometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
@@ -812,12 +829,7 @@ export class SolarSystem {
     // Render after opaque objects
     orbit.renderOrder = 10;  // High render order to ensure it's drawn after planets
     
-    // Apply orbital inclination relative to the planet's equatorial plane
-    if (moonData.inclination !== undefined) {
-      const inclinationRad = THREE.MathUtils.degToRad(moonData.inclination);
-      orbit.rotation.x = inclinationRad; // Rotate around X-axis to tilt the orbit
-      // Orbit tilted by ${moonData.inclination}° relative to planet's equator
-    }
+    // No need to rotate the orbit - inclination is already applied to the points
     
     orbit.userData = { 
       orbitRadius: orbitRadius,
