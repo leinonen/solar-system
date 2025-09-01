@@ -26,8 +26,9 @@ export class AsteroidBelt {
     
     // Asteroid belt is between Mars (1.524 AU) and Jupiter (5.204 AU)
     // Main belt spans roughly 2.2 to 3.3 AU
-    this.innerRadius = 2.2 * 30; // Convert AU to scene units
-    this.outerRadius = 3.3 * 30;
+    // Use progressive scaling matching planet orbits (2.2-3.3 AU falls in 60-80 range)
+    this.innerRadius = 2.2 * 80; // Convert AU to scene units using gas giant scaling
+    this.outerRadius = 3.3 * 80;
     
     this.createAsteroidBelt();
   }
@@ -137,7 +138,7 @@ export class AsteroidBelt {
       
       // Calculate orbital period using Kepler's third law
       // T² = a³ where T is in Earth years and a is in AU
-      const orbitalRadiusAU = orbitalRadius / 30; // Convert scene units to AU (30 scene units = 1 AU)
+      const orbitalRadiusAU = orbitalRadius / 80; // Convert scene units to AU (using gas giant scaling)
       const orbitalPeriodYears = Math.sqrt(Math.pow(orbitalRadiusAU, 3));
       const orbitalPeriodDays = orbitalPeriodYears * 365.256;
       
