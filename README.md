@@ -4,9 +4,9 @@ Interactive 3D visualization of the solar system built with Three.js and TypeScr
 
 ## Features
 
-- **Accurate orbital mechanics** - All planets follow Kepler's laws with real orbital parameters
+- **Simplified orbital mechanics** - Planets follow basic Keplerian motion with eccentricity and inclination
 - **6DOF SpaceMouse support** - Full navigation with 3DConnexion devices (Chrome/Edge)
-- **Time control** - Speed up, slow down, or reverse time (up to 100x)
+- **Time control** - Speed up, slow down, or reverse time (up to 86 million x)
 - **Interactive planets** - Click to focus, hover for information (mass, temperature, moons)
 - **Visual enhancements**:
   - 15,000+ star field with Milky Way skybox
@@ -50,7 +50,7 @@ Open http://localhost:3000 in your browser.
 
 - 60 FPS with instanced rendering for stars and asteroids
 - Optimized LOD for labels and orbital paths
-- Efficient orbital calculations using Kepler's laws
+- Efficient orbital calculations using simplified Kepler's equations
 
 ## Build
 
