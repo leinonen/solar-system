@@ -190,6 +190,43 @@ export const PLANETS: PlanetData[] = [
         outerRadius: 51149 / EARTH_RADIUS,
       },
     ],
+    moons: [
+      {
+        name: 'Miranda',
+        radius: 236,
+        orbitalRadius: 129900 / AU,
+        orbitalPeriod: 1.413,
+        inclination: 4.34, // degrees to Uranus equator
+      },
+      {
+        name: 'Ariel',
+        radius: 579,
+        orbitalRadius: 190900 / AU,
+        orbitalPeriod: 2.520,
+        inclination: 0.04, // degrees to Uranus equator
+      },
+      {
+        name: 'Umbriel',
+        radius: 585,
+        orbitalRadius: 266000 / AU,
+        orbitalPeriod: 4.144,
+        inclination: 0.13, // degrees to Uranus equator
+      },
+      {
+        name: 'Titania',
+        radius: 789,
+        orbitalRadius: 436300 / AU,
+        orbitalPeriod: 8.706,
+        inclination: 0.08, // degrees to Uranus equator
+      },
+      {
+        name: 'Oberon',
+        radius: 761,
+        orbitalRadius: 583500 / AU,
+        orbitalPeriod: 13.463,
+        inclination: 0.07, // degrees to Uranus equator
+      },
+    ],
   },
   {
     name: 'Neptune',
