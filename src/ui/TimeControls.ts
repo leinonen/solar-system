@@ -8,7 +8,6 @@ export class TimeControls {
   private referenceDate: Date = new Date(); // Start with current date
   private playPauseBtn: HTMLElement | null = null;
   private timeSpeedSelect: HTMLSelectElement | null = null;
-  private currentSpeedDisplay: HTMLElement | null = null;
   private currentDateDisplay: HTMLElement | null = null;
   private datePicker: HTMLInputElement | null = null;
   private resetToNowBtn: HTMLElement | null = null;
@@ -35,7 +34,6 @@ export class TimeControls {
   private initializeControls(): void {
     this.playPauseBtn = document.getElementById('play-pause');
     this.timeSpeedSelect = document.getElementById('time-speed') as HTMLSelectElement;
-    this.currentSpeedDisplay = document.getElementById('current-speed');
     this.currentDateDisplay = document.getElementById('current-date');
     this.datePicker = document.getElementById('date-picker') as HTMLInputElement;
     this.resetToNowBtn = document.getElementById('reset-to-now');
@@ -90,20 +88,13 @@ export class TimeControls {
     const selectedValue = this.timeSpeedSelect.value;
     this.timeScale = parseFloat(selectedValue);
     
-    // Update display
-    const description = this.TIME_PRESETS[selectedValue as keyof typeof this.TIME_PRESETS] || `${this.timeScale}x speed`;
-    this.updateCurrentSpeedDisplay(description);
+    // Time scale updated - no need to display separately since dropdown shows the selected value
     
     if (!this.isPaused) {
       this.solarSystem.setTimeScale(this.timeScale);
     }
   }
 
-  private updateCurrentSpeedDisplay(text: string): void {
-    if (this.currentSpeedDisplay) {
-      this.currentSpeedDisplay.textContent = text;
-    }
-  }
 
   private updateCurrentDateDisplay(): void {
     if (!this.currentDateDisplay) return;
