@@ -44,7 +44,21 @@ export class Skybox {
         vertexShader: `
           varying vec2 vUv;
           void main() {
-            vUv = uv;
+            // Apply 23.4° rotation around X-axis to align with celestial equator
+            float angle = -0.40840704; // -23.4 degrees in radians
+            float cosAngle = cos(angle);
+            float sinAngle = sin(angle);
+            
+            vec3 rotatedPosition = position;
+            rotatedPosition.y = position.y * cosAngle - position.z * sinAngle;
+            rotatedPosition.z = position.y * sinAngle + position.z * cosAngle;
+            
+            // Calculate UV coordinates from rotated position
+            vec3 normalizedPos = normalize(rotatedPosition);
+            float longitude = atan(normalizedPos.z, normalizedPos.x) / (2.0 * 3.14159265) + 0.5;
+            float latitude = asin(normalizedPos.y) / 3.14159265 + 0.5;
+            vUv = vec2(longitude, latitude);
+            
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
           }
         `,
