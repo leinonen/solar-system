@@ -8,6 +8,7 @@ import { Settings } from './ui/Settings';
 import { Labels } from './ui/Labels';
 import { Selection } from './ui/Selection';
 import { About } from './ui/About';
+import { SpaceMouseSettings } from './ui/SpaceMouseSettings';
 
 class App {
   private scene: THREE.Scene;
@@ -17,6 +18,7 @@ class App {
   private skybox: Skybox;
   private controls: FallbackControls;
   private spaceMouseController: SpaceMouseController;
+  private spaceMouseSettings: SpaceMouseSettings;
   private timeControls: TimeControls;
   private settings: Settings;
   private labels: Labels;
@@ -42,6 +44,7 @@ class App {
     
     this.controls = new FallbackControls(this.camera, this.renderer.domElement);
     this.spaceMouseController = new SpaceMouseController(this.camera);
+    this.spaceMouseSettings = new SpaceMouseSettings(this.spaceMouseController);
     
     this.timeControls = new TimeControls(this.solarSystem);
     this.settings = new Settings(this.solarSystem, this);

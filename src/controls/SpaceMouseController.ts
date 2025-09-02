@@ -29,14 +29,85 @@ export class SpaceMouseController {
   private camera: THREE.PerspectiveCamera;
   private device: HIDDevice | null = null;
   private isConnected: boolean = false;
-  private panSensitivity: number = 0.01;
-  private zoomSensitivity: number = 0.02;
-  private rotationSensitivity: number = 0.0003;
-  private deadZone: number = 2;
+  
+  // Base sensitivities (will be multiplied by user settings)
+  private basePanSensitivity: number = 0.005;
+  private baseZoomSensitivity: number = 0.01;
+  private baseRotationSensitivity: number = 0.001;
+  
+  // User adjustable settings
+  private panSensitivity: number = 1.0;
+  private zoomSensitivity: number = 1.0;
+  private rotationSensitivity: number = 1.0;
+  private deadZone: number = 15;
+  private exponentialCurve: number = 1.5; // Power for exponential response
+  private smoothingFactor: number = 0.15; // For momentum/smoothing
+  
+  // Momentum/smoothing state
+  private translationVelocity: THREE.Vector3 = new THREE.Vector3();
+  private rotationVelocity: THREE.Vector3 = new THREE.Vector3();
+  private enableMomentum: boolean = true;
+  
+  // Input visualization
+  private showInputOverlay: boolean = false;
+  private lastInputTime: number = 0;
+  private currentTranslation: THREE.Vector3 = new THREE.Vector3();
+  private currentRotation: THREE.Vector3 = new THREE.Vector3();
   
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
+    this.loadSettings();
     this.initializeSpaceMouse();
+    this.createInputOverlay();
+  }
+  
+  private loadSettings(): void {
+    const settings = localStorage.getItem('spaceMouseSettings');
+    if (settings) {
+      const parsed = JSON.parse(settings);
+      this.panSensitivity = parsed.panSensitivity ?? 1.0;
+      this.zoomSensitivity = parsed.zoomSensitivity ?? 1.0;
+      this.rotationSensitivity = parsed.rotationSensitivity ?? 1.0;
+      this.deadZone = parsed.deadZone ?? 15;
+      this.exponentialCurve = parsed.exponentialCurve ?? 1.5;
+      this.smoothingFactor = parsed.smoothingFactor ?? 0.15;
+      this.enableMomentum = parsed.enableMomentum ?? true;
+      this.showInputOverlay = parsed.showInputOverlay ?? false;
+    }
+  }
+  
+  private saveSettings(): void {
+    const settings = {
+      panSensitivity: this.panSensitivity,
+      zoomSensitivity: this.zoomSensitivity,
+      rotationSensitivity: this.rotationSensitivity,
+      deadZone: this.deadZone,
+      exponentialCurve: this.exponentialCurve,
+      smoothingFactor: this.smoothingFactor,
+      enableMomentum: this.enableMomentum,
+      showInputOverlay: this.showInputOverlay
+    };
+    localStorage.setItem('spaceMouseSettings', JSON.stringify(settings));
+  }
+  
+  private createInputOverlay(): void {
+    const overlay = document.createElement('div');
+    overlay.id = 'spacemouse-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      bottom: 80px;
+      left: 20px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #00ff00;
+      font-family: monospace;
+      font-size: 11px;
+      border-radius: 5px;
+      display: none;
+      z-index: 1000;
+      width: 140px;
+    `;
+    document.body.appendChild(overlay);
   }
 
   private async initializeSpaceMouse(): Promise<void> {
@@ -114,6 +185,7 @@ export class SpaceMouseController {
       // Update UI
       const button = document.getElementById('connect-spacemouse');
       const status = document.getElementById('spacemouse-state');
+      const settingsBtn = document.getElementById('spacemouse-settings-toggle');
       
       if (button) {
         button.classList.add('hidden');
@@ -122,6 +194,10 @@ export class SpaceMouseController {
       if (status) {
         status.textContent = 'Connected';
         status.classList.add('connected');
+      }
+      
+      if (settingsBtn) {
+        settingsBtn.classList.remove('hidden');
       }
       
       // Start listening for input
@@ -133,84 +209,137 @@ export class SpaceMouseController {
     }
   }
 
+  private applyExponentialCurve(value: number, max: number = 350): number {
+    if (value === 0) return 0;
+    const sign = Math.sign(value);
+    const normalized = Math.abs(value) / max;
+    const curved = Math.pow(normalized, this.exponentialCurve);
+    return sign * curved * max;
+  }
+  
   private handleInput(event: HIDInputReportEvent): void {
     const { data, reportId } = event;
+    this.lastInputTime = Date.now();
     
     if (reportId === 1) {
       // Translation data
-      const x = this.getSignedInt16(data, 0);
-      const y = this.getSignedInt16(data, 2);
-      const z = this.getSignedInt16(data, 4);
+      const rawX = this.getSignedInt16(data, 0);
+      const rawY = this.getSignedInt16(data, 2);
+      const rawZ = this.getSignedInt16(data, 4);
       
-      // Apply dead zone to reduce jitter
-      const filteredX = Math.abs(x) > this.deadZone ? x : 0;
-      const filteredY = Math.abs(y) > this.deadZone ? y : 0;
-      const filteredZ = Math.abs(z) > this.deadZone ? z : 0;
+      // Debug logging to see raw values
+      console.log('Raw SpaceMouse input:', { rawX, rawY, rawZ });
       
+      // Apply dead zone to all axes
+      let x = Math.abs(rawX) > this.deadZone ? rawX : 0;
+      let y = Math.abs(rawY) > this.deadZone ? rawY : 0;
+      let z = Math.abs(rawZ) > this.deadZone ? rawZ : 0;
       
-      // Pan movement (X) - move left/right relative to camera
-      if (filteredX !== 0) {
-        const right = new THREE.Vector3(1, 0, 0);
-        right.applyQuaternion(this.camera.quaternion);
+      // Apply exponential response curve
+      x = this.applyExponentialCurve(x);
+      y = this.applyExponentialCurve(y);
+      z = this.applyExponentialCurve(z);
+      
+      // Normalize to -1 to 1 range
+      const normalizedX = x / 350;
+      const normalizedY = y / 350;
+      const normalizedZ = z / 350;
+      
+      // Store for visualization
+      this.currentTranslation.set(normalizedX, normalizedY, normalizedZ);
+      
+      // Increased speed for better responsiveness
+      const moveSpeed = 10.0;
+      
+      // Forward/Backward movement (Y axis) - WORKING
+      if (normalizedY !== 0) {
+        console.log('Moving forward/backward:', normalizedY);
         
-        const movement = new THREE.Vector3();
-        movement.addScaledVector(right, filteredX * this.panSensitivity);
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(this.camera.quaternion);
+        const movement = forward.multiplyScalar(-normalizedY * moveSpeed * this.zoomSensitivity);
+        
+        // Direct movement (no momentum)
         this.camera.position.add(movement);
       }
       
-      // Forward/Backward movement (Y) - move forward/backward along camera direction
-      if (filteredY !== 0) {
-        const forward = new THREE.Vector3(0, 0, -1);
-        forward.applyQuaternion(this.camera.quaternion);
-        forward.multiplyScalar(-filteredY * this.zoomSensitivity);
-        this.camera.position.add(forward);
+      // Left/Right movement (X axis) - WORKING
+      if (normalizedX !== 0) {
+        console.log('Moving left/right:', normalizedX);
+        
+        const right = new THREE.Vector3(1, 0, 0);
+        right.applyQuaternion(this.camera.quaternion);
+        const movement = right.multiplyScalar(normalizedX * moveSpeed * this.panSensitivity);
+        
+        // Direct movement (no momentum)
+        this.camera.position.add(movement);
       }
       
-      // Up/Down movement (Z) - move up/down relative to orbital plane (world Y)
-      if (filteredZ !== 0) {
-        const worldUp = new THREE.Vector3(0, 1, 0);
-        const movement = new THREE.Vector3();
-        movement.addScaledVector(worldUp, filteredZ * this.panSensitivity);
+      // Up/Down movement (Z axis) - INVERTED TO MATCH EXPECTATION
+      if (normalizedZ !== 0) {
+        console.log('Moving up/down:', normalizedZ);
+        
+        const up = new THREE.Vector3(0, 1, 0);
+        up.applyQuaternion(this.camera.quaternion);
+        const movement = up.multiplyScalar(-normalizedZ * moveSpeed * this.panSensitivity);  // Negated Z
+        
+        // Direct movement (no momentum)
         this.camera.position.add(movement);
       }
       
     } else if (reportId === 2) {
       // Rotation data
-      const rx = this.getSignedInt16(data, 0);
-      const ry = this.getSignedInt16(data, 2);
-      const rz = this.getSignedInt16(data, 4);
+      const rawRx = this.getSignedInt16(data, 0);
+      const rawRy = this.getSignedInt16(data, 2);
+      const rawRz = this.getSignedInt16(data, 4);
       
-      // Apply dead zone to reduce jitter
-      const filteredRx = Math.abs(rx) > this.deadZone ? rx : 0;
-      const filteredRy = Math.abs(ry) > this.deadZone ? ry : 0;
-      const filteredRz = Math.abs(rz) > this.deadZone ? rz : 0;
+      console.log('Raw rotation input:', { rawRx, rawRy, rawRz });
       
-      // Apply rotations directly
-      if (filteredRx !== 0) {
+      // Apply dead zone to pitch and twist (skip yaw)
+      let rx = Math.abs(rawRx) > this.deadZone ? rawRx : 0;
+      let ry = 0;  // Skip yaw - feels weird
+      let rz = Math.abs(rawRz) > this.deadZone ? rawRz : 0;  // Use twist for turning
+      
+      // Apply exponential response curve
+      rx = this.applyExponentialCurve(rx);
+      rz = this.applyExponentialCurve(rz);
+      
+      // Normalize to -1 to 1 range
+      const normalizedRx = rx / 350;
+      const normalizedRy = ry / 350;
+      const normalizedRz = rz / 350;
+      
+      // Store for visualization
+      this.currentRotation.set(normalizedRx, normalizedRy, normalizedRz);
+      
+      // Rotation speed
+      const rotSpeed = 0.02;
+      
+      // Pitch rotation (X axis) - WORKING
+      if (normalizedRx !== 0) {
+        console.log('Rotating pitch:', normalizedRx);
+        
         const right = new THREE.Vector3(1, 0, 0);
         right.applyQuaternion(this.camera.quaternion);
         const pitchQuat = new THREE.Quaternion().setFromAxisAngle(
-          right,
-          -filteredRx * this.rotationSensitivity
+          right, 
+          -normalizedRx * rotSpeed * this.rotationSensitivity
         );
         this.camera.quaternion.multiplyQuaternions(pitchQuat, this.camera.quaternion);
       }
       
-      if (filteredRy !== 0) {
-        const yawQuat = new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          -filteredRy * this.rotationSensitivity
-        );
-        this.camera.quaternion.multiplyQuaternions(yawQuat, this.camera.quaternion);
-      }
+      // SKIP YAW - Use twist for turning instead
       
-      // Twist rotation (Z) - rotate around orbital plane axis (world Y)
-      if (filteredRz !== 0) {
-        const rollQuat = new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          filteredRz * this.rotationSensitivity
+      // Twist to turn (use Y axis for turning, not roll) - NOW TESTING
+      if (normalizedRz !== 0) {
+        console.log('Twisting to turn:', normalizedRz);
+        
+        // Use Y axis (up) for turning left/right when twisting
+        const turnQuat = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0), 
+          normalizedRz * rotSpeed * this.rotationSensitivity
         );
-        this.camera.quaternion.multiplyQuaternions(rollQuat, this.camera.quaternion);
+        this.camera.quaternion.multiplyQuaternions(turnQuat, this.camera.quaternion);
       }
       
     } else if (reportId === 3) {
@@ -243,8 +372,105 @@ export class SpaceMouseController {
   }
 
   public update(): void {
-    // All movement is now handled directly in handleInput()
-    // No momentum system - immediate response only
+    if (!this.isConnected) return;
+    
+    // MOMENTUM DISABLED FOR TESTING
+    // // Apply momentum if enabled
+    // if (this.enableMomentum) {
+    //   // Apply translation velocity
+    //   if (this.translationVelocity.lengthSq() > 0.001) {
+    //     this.camera.position.add(this.translationVelocity);
+    //     // Dampen velocity
+    //     this.translationVelocity.multiplyScalar(0.9);
+    //   }
+    // }
+    
+    // Update input overlay
+    this.updateInputOverlay();
+  }
+  
+  private updateInputOverlay(): void {
+    const overlay = document.getElementById('spacemouse-overlay');
+    if (!overlay) return;
+    
+    if (this.showInputOverlay && this.isConnected) {
+      const timeSinceInput = Date.now() - this.lastInputTime;
+      if (timeSinceInput < 2000) { // Show for 2 seconds after last input
+        overlay.style.display = 'block';
+        overlay.innerHTML = `
+          <div style="color: #0f0; font-weight: bold;">SpaceMouse</div>
+          <div style="color: #888; font-size: 10px;">Move:</div>
+          <div style="font-size: 10px;">X:${(this.currentTranslation.x * 100).toFixed(0)}% Y:${(this.currentTranslation.y * 100).toFixed(0)}% Z:${(this.currentTranslation.z * 100).toFixed(0)}%</div>
+          <div style="color: #888; font-size: 10px; margin-top: 3px;">Rotate:</div>
+          <div style="font-size: 10px;">P:${(this.currentRotation.x * 100).toFixed(0)}% Y:${(this.currentRotation.y * 100).toFixed(0)}% R:${(this.currentRotation.z * 100).toFixed(0)}%</div>
+        `;
+      } else {
+        overlay.style.display = 'none';
+        this.currentTranslation.set(0, 0, 0);
+        this.currentRotation.set(0, 0, 0);
+      }
+    } else {
+      overlay.style.display = 'none';
+    }
+  }
+  
+  // Settings methods for UI integration
+  public setPanSensitivity(value: number): void {
+    this.panSensitivity = value;
+    this.saveSettings();
+  }
+  
+  public setZoomSensitivity(value: number): void {
+    this.zoomSensitivity = value;
+    this.saveSettings();
+  }
+  
+  public setRotationSensitivity(value: number): void {
+    this.rotationSensitivity = value;
+    this.saveSettings();
+  }
+  
+  public setDeadZone(value: number): void {
+    this.deadZone = value;
+    this.saveSettings();
+  }
+  
+  public setExponentialCurve(value: number): void {
+    this.exponentialCurve = value;
+    this.saveSettings();
+  }
+  
+  public setSmoothingFactor(value: number): void {
+    this.smoothingFactor = value;
+    this.saveSettings();
+  }
+  
+  public setEnableMomentum(value: boolean): void {
+    this.enableMomentum = value;
+    if (!value) {
+      // Clear velocities when disabling momentum
+      this.translationVelocity.set(0, 0, 0);
+      this.rotationVelocity.set(0, 0, 0);
+    }
+    this.saveSettings();
+  }
+  
+  public setShowInputOverlay(value: boolean): void {
+    this.showInputOverlay = value;
+    this.saveSettings();
+  }
+  
+  public getSettings() {
+    return {
+      panSensitivity: this.panSensitivity,
+      zoomSensitivity: this.zoomSensitivity,
+      rotationSensitivity: this.rotationSensitivity,
+      deadZone: this.deadZone,
+      exponentialCurve: this.exponentialCurve,
+      smoothingFactor: this.smoothingFactor,
+      enableMomentum: this.enableMomentum,
+      showInputOverlay: this.showInputOverlay
+    };
   }
 
   public disconnect(): void {

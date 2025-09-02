@@ -104,8 +104,63 @@
     </div>
     
     <div id="spacemouse-status" class="panel">
-      <span id="spacemouse-indicator">🖱️ SpaceMouse: <span id="spacemouse-state">Not Connected</span></span>
-      <button id="connect-spacemouse" class="hidden">Connect SpaceMouse</button>
+      <div id="spacemouse-main">
+        <div id="spacemouse-indicator" class="device-status">
+          <span class="status-icon">🎮</span>
+          <span class="status-text">SpaceMouse:</span>
+          <span id="spacemouse-state" class="status-value">Not Connected</span>
+          <button id="spacemouse-settings-toggle" class="hidden" title="SpaceMouse Settings">⚙️</button>
+        </div>
+        <button id="connect-spacemouse" class="hidden">Connect</button>
+      </div>
+      <div id="spacemouse-settings" class="spacemouse-settings hidden">
+        <h4>SpaceMouse Settings</h4>
+        <div class="setting-group">
+          <label>
+            <span>Pan Sensitivity</span>
+            <input type="range" id="sm-pan-sensitivity" min="0.1" max="3" step="0.1" value="1">
+            <span class="value-display" id="sm-pan-value">1.0</span>
+          </label>
+          <label>
+            <span>Zoom Sensitivity</span>
+            <input type="range" id="sm-zoom-sensitivity" min="0.1" max="3" step="0.1" value="1">
+            <span class="value-display" id="sm-zoom-value">1.0</span>
+          </label>
+          <label>
+            <span>Rotation Sensitivity</span>
+            <input type="range" id="sm-rotation-sensitivity" min="0.1" max="3" step="0.1" value="1">
+            <span class="value-display" id="sm-rotation-value">1.0</span>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label>
+            <span>Dead Zone</span>
+            <input type="range" id="sm-deadzone" min="5" max="50" step="5" value="15">
+            <span class="value-display" id="sm-deadzone-value">15</span>
+          </label>
+          <label>
+            <span>Response Curve</span>
+            <input type="range" id="sm-curve" min="1" max="3" step="0.1" value="1.5">
+            <span class="value-display" id="sm-curve-value">1.5</span>
+          </label>
+          <label>
+            <span>Smoothing</span>
+            <input type="range" id="sm-smoothing" min="0.05" max="0.5" step="0.05" value="0.15">
+            <span class="value-display" id="sm-smoothing-value">0.15</span>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="sm-momentum" checked>
+            <span>Enable Momentum</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="sm-overlay">
+            <span>Show Input Overlay</span>
+          </label>
+        </div>
+        <button id="sm-reset-settings" class="reset-btn">Reset to Defaults</button>
+      </div>
     </div>
     
     <div id="about" class="panel">
