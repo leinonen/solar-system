@@ -458,32 +458,6 @@ body {
   margin-top: 15px;
 }
 
-#view-controls {
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 10px;
-}
-
-#view-controls button {
-  background: #0099ff;
-  border: none;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s ease;
-}
-
-#view-controls button:hover {
-  background: #0077cc;
-}
-
-#view-controls button:active {
-  background: #005599;
-}
 
 .loading {
   position: absolute;
@@ -563,15 +537,6 @@ body {
     max-height: 50vh;
   }
   
-  #view-controls {
-    top: 10px;
-    gap: 8px;
-  }
-  
-  #view-controls button {
-    padding: 10px 14px;
-    font-size: 14px;
-  }
 }
 
 /* Landscape phones and small tablets */

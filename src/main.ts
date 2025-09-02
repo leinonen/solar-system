@@ -78,8 +78,6 @@ class App {
     });
     
     this.setupEventListeners();
-    this.setupViewControls();
-    this.setIsometricView(); // Set default view
     this.animate();
   }
 
@@ -344,58 +342,6 @@ class App {
     return this.controls.isMouseDown() || this.spaceMouseController.isActive() || this.isTouchDevice;
   }
 
-  private setupViewControls(): void {
-    const topViewButton = document.getElementById('top-view');
-    const isometricViewButton = document.getElementById('isometric-view');
-
-    if (topViewButton) {
-      topViewButton.addEventListener('click', () => this.setTopView());
-    }
-
-    if (isometricViewButton) {
-      isometricViewButton.addEventListener('click', () => this.setIsometricView());
-    }
-  }
-
-  private calculateSolarSystemBounds(): { maxDistance: number; center: THREE.Vector3 } {
-    // Find the farthest planet orbit to determine view bounds
-    const maxOrbitRadius = Math.max(...this.solarSystem.getPlanets().map(planet => {
-      const planetData = this.solarSystem.getPlanetData(planet.name);
-      return planetData ? planetData.orbitalRadius * 30 : 0; // Use scaled orbit radius
-    }));
-    
-    return {
-      maxDistance: maxOrbitRadius * 1.2, // Add 20% padding
-      center: new THREE.Vector3(0, 0, 0)
-    };
-  }
-
-  private setTopView(): void {
-    const bounds = this.calculateSolarSystemBounds();
-    const height = bounds.maxDistance * 1.5; // Position camera above to see all planets
-    
-    // Offset position to align with flipped isometric view orientation
-    const position = new THREE.Vector3(-height * 0.2, height, -height * 0.2);
-    const target = bounds.center;
-    
-    this.controls.smoothMoveTo(position, target);
-  }
-
-  private setIsometricView(): void {
-    const bounds = this.calculateSolarSystemBounds();
-    const distance = bounds.maxDistance * 1.2;
-    
-    // Isometric angle: 45 degrees from horizontal, 35.26 degrees from ground
-    // Flipped to opposite direction to show Saturn in the distance
-    const position = new THREE.Vector3(
-      -distance * 0.7071, // -cos(45°) * distance (flipped X)
-      distance * 0.5774,  // sin(35.26°) * distance (same Y)
-      -distance * 0.7071  // -cos(45°) * distance (flipped Z)
-    );
-    const target = bounds.center;
-    
-    this.controls.smoothMoveTo(position, target);
-  }
 }
 
 // Initialize the app when DOM is ready
