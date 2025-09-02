@@ -3,6 +3,7 @@ import { SolarSystem } from './scene/SolarSystem';
 import { Skybox } from './scene/Skybox';
 import { FallbackControls } from './controls/FallbackControls';
 import { SpaceMouseController } from './controls/SpaceMouseController';
+import { TouchControls } from './controls/TouchControls';
 import { TimeControls } from './ui/TimeControls';
 import { Settings } from './ui/Settings';
 import { Labels } from './ui/Labels';
@@ -17,6 +18,7 @@ class App {
   private solarSystem: SolarSystem;
   private skybox: Skybox;
   private controls: FallbackControls;
+  private touchControls: TouchControls;
   private spaceMouseController: SpaceMouseController;
   private spaceMouseSettings: SpaceMouseSettings;
   private timeControls: TimeControls;
@@ -27,12 +29,16 @@ class App {
   private clock: THREE.Clock;
   private raycaster: THREE.Raycaster;
   private mouse: THREE.Vector2;
+  private isTouchDevice: boolean;
 
   constructor() {
     this.scene = new THREE.Scene();
     this.clock = new THREE.Clock();
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
+    
+    // Detect if this is a touch device
+    this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     
     this.setupRenderer();
     this.setupCamera();
@@ -42,9 +48,16 @@ class App {
     this.solarSystem.setCamera(this.camera);
     this.skybox = new Skybox(this.scene);
     
+    // Setup appropriate controls based on device type
     this.controls = new FallbackControls(this.camera, this.renderer.domElement);
+    this.touchControls = new TouchControls(this.camera, this.renderer.domElement);
     this.spaceMouseController = new SpaceMouseController(this.camera);
     this.spaceMouseSettings = new SpaceMouseSettings(this.spaceMouseController);
+    
+    // Disable keyboard/mouse controls on touch devices initially
+    if (this.isTouchDevice) {
+      this.controls.setEnabled(false);
+    }
     
     this.timeControls = new TimeControls(this.solarSystem);
     this.settings = new Settings(this.solarSystem, this);
@@ -189,13 +202,23 @@ class App {
     if (!infoElement) return;
     
     if (!selectionInfo) {
-      infoElement.innerHTML = `
-        <strong>Camera Controls:</strong><br>
-        <span style="color: #aaa;">Mouse:</span> Drag to rotate • Scroll to zoom<br>
-        <span style="color: #aaa;">Keyboard:</span> WASD to move • Q/E up/down • Shift for speed<br>
-        <br>
-        Click on a planet, moon, or the Sun for information
-      `;
+      if (this.isTouchDevice) {
+        infoElement.innerHTML = `
+          <strong>Touch Controls:</strong><br>
+          <span style="color: #aaa;">1 finger:</span> Drag to rotate camera<br>
+          <span style="color: #aaa;">2 fingers:</span> Pinch to zoom • Drag to pan<br>
+          <br>
+          Tap on a planet, moon, or the Sun for information
+        `;
+      } else {
+        infoElement.innerHTML = `
+          <strong>Camera Controls:</strong><br>
+          <span style="color: #aaa;">Mouse:</span> Drag to rotate • Scroll to zoom<br>
+          <span style="color: #aaa;">Keyboard:</span> WASD to move • Q/E up/down • Shift for speed<br>
+          <br>
+          Click on a planet, moon, or the Sun for information
+        `;
+      }
       return;
     }
 
@@ -244,10 +267,15 @@ class App {
     
     const delta = this.clock.getDelta();
     
+    // Update appropriate controls based on device and active inputs
     if (!this.spaceMouseController.isActive()) {
-      this.controls.update();
+      if (!this.isTouchDevice) {
+        this.controls.update();
+      }
     }
+    
     this.spaceMouseController.update();
+    this.touchControls.update();
     this.solarSystem.update(delta);
     this.labels.update();
     this.selection.update();
@@ -313,7 +341,7 @@ class App {
   }
 
   private isUsingControls(): boolean {
-    return this.controls.isMouseDown() || this.spaceMouseController.isActive();
+    return this.controls.isMouseDown() || this.spaceMouseController.isActive() || this.isTouchDevice;
   }
 
   private setupViewControls(): void {

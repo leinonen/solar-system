@@ -13,6 +13,7 @@ export class FallbackControls {
   private startPosition: THREE.Vector3;
   private startTarget: THREE.Vector3;
   private animationProgress: number = 0;
+  private enabled: boolean = true;
   
   private mouseDown: boolean = false;
   private mouseX: number = 0;
@@ -54,6 +55,7 @@ export class FallbackControls {
   }
 
   private onMouseDown(event: MouseEvent): void {
+    if (!this.enabled) return;
     if (event.button === 0 || event.button === 2) {
       this.mouseDown = true;
       this.mouseX = event.clientX;
@@ -100,6 +102,8 @@ export class FallbackControls {
   }
 
   public update(): void {
+    if (!this.enabled) return;
+    
     // Handle keyboard movement
     const moveVector = new THREE.Vector3();
     
@@ -200,5 +204,13 @@ export class FallbackControls {
 
   public isMouseDown(): boolean {
     return this.mouseDown;
+  }
+
+  public setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
+  public isEnabled(): boolean {
+    return this.enabled;
   }
 }
