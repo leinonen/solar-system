@@ -674,6 +674,7 @@ body {
   #time-controls {
     position: fixed;
     bottom: 0;
+    bottom: env(safe-area-inset-bottom);
     left: 0;
     right: 0;
     transform: none;
@@ -682,6 +683,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
     gap: 10px;
     background: rgba(20, 20, 30, 0.98);
   }
@@ -948,12 +950,14 @@ body {
   
   /* Time controls - optimized for tablet */
   #time-controls {
-    bottom: 20px;
+    position: fixed;
+    bottom: 40px;
+    bottom: calc(env(safe-area-inset-bottom) + 40px);
     left: 50%;
     transform: translateX(-50%);
     width: auto;
     min-width: 500px;
-    max-width: 700px;
+    max-width: calc(100vw - 40px);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 15px 20px;
@@ -963,6 +967,7 @@ body {
     justify-content: space-between;
     gap: 20px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 100;
   }
   
   #time-controls .time-controls-main {
