@@ -10,6 +10,11 @@
   <div id="app">
     <canvas id="canvas"></canvas>
     
+    <!-- Mobile navigation indicator -->
+    <div id="mobile-nav-hint" class="mobile-only">
+      <span class="touch-hint">👆 Drag to rotate • 👌 Pinch to zoom • ✌️ Drag to pan</span>
+    </div>
+    
     <div id="info-panel" class="panel">
       <h2>Solar System Explorer</h2>
       <p id="planet-info">Click on a planet or the Sun for information</p>
@@ -20,81 +25,101 @@
     </div>
     
     <div id="time-controls" class="panel">
-      <button id="play-pause">⏸</button>
-      <label for="time-speed">Time Scale:</label>
-      <select id="time-speed">
-        <option value="1" selected>Real Time (1x)</option>
-        <option value="3600">1 hour per second</option>
-        <option value="86400">1 day per second</option>
-        <option value="604800">1 week per second</option>
-        <option value="2629800">1 month per second</option>
-        <option value="525969">Earth orbit in 1 minute</option>
-        <option value="6238930">Jupiter orbit in 1 minute</option>
-        <option value="15493277">Saturn orbit in 1 minute</option>
-        <option value="44191440">Uranus orbit in 1 minute</option>
-        <option value="86680800">Neptune orbit in 1 minute</option>
-      </select>
       <div id="time-display">
         <div id="current-date">Loading...</div>
       </div>
-      <input type="date" id="date-picker">
-      <button id="reset-to-now">Reset to Now</button>
+      <div class="time-controls-main">
+        <button id="play-pause">⏸</button>
+        <select id="time-speed">
+          <option value="1" selected>Real Time (1x)</option>
+          <option value="3600">1 hour/sec</option>
+          <option value="86400">1 day/sec</option>
+          <option value="604800">1 week/sec</option>
+          <option value="2629800">1 month/sec</option>
+          <option value="525969">Earth orbit/min</option>
+          <option value="6238930">Jupiter orbit/min</option>
+          <option value="15493277">Saturn orbit/min</option>
+          <option value="44191440">Uranus orbit/min</option>
+          <option value="86680800">Neptune orbit/min</option>
+        </select>
+        <button id="reset-to-now">Now</button>
+        <input type="date" id="date-picker">
+      </div>
     </div>
     
     <div id="settings" class="panel">
       <button id="settings-toggle">⚙️</button>
       <div id="settings-content" class="hidden">
-        <label>
-          <input type="checkbox" id="show-orbits" checked> Show Orbits
-        </label>
-        <label>
-          Orbit Mode: 
-          <select id="orbit-mode">
-            <option value="static">Static Orbits</option>
-            <option value="trails">Dynamic Trails</option>
-          </select>
-        </label>
-        <label>
-          <input type="checkbox" id="show-labels" checked> Show Labels
-        </label>
-        <label>
-          <input type="checkbox" id="show-moons" checked> Show Moons
-        </label>
-        <label>
-          <input type="checkbox" id="show-moon-orbits"> Show Moon Orbits
-        </label>
-        <label>
-          <input type="checkbox" id="show-asteroid-belt"> Show Asteroid Belt
-        </label>
-        <label>
-          <input type="checkbox" id="show-milkyway"> Show Milky Way
-        </label>
-        <label>
-          <input type="checkbox" id="show-distance-labels"> Show Distance Labels
-        </label>
-        <div id="au-info" style="font-size: 11px; color: rgba(255,255,255,0.7); margin-left: 20px; line-height: 1.3;">
-          1 AU = ~150 million km<br>
-          (Earth-Sun distance)
+        <div class="settings-section">
+          <h4 class="settings-section-title">Display</h4>
+          <label>
+            <input type="checkbox" id="show-orbits" checked>
+            <span>Show Orbits</span>
+          </label>
+          <label>
+            <span>Orbit Mode</span>
+            <select id="orbit-mode">
+              <option value="static">Static</option>
+              <option value="trails">Trails</option>
+            </select>
+          </label>
+          <label>
+            <input type="checkbox" id="show-labels" checked>
+            <span>Show Labels</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-moons" checked>
+            <span>Show Moons</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-moon-orbits">
+            <span>Moon Orbits</span>
+          </label>
         </div>
-        <label>
-          <input type="checkbox" id="show-coordinate-system"> Show Coordinate System
-        </label>
-        <label>
-          <input type="checkbox" id="show-equinox-markers"> Show Equinoxes/Solstices
-        </label>
-        <label>
-          <input type="checkbox" id="enable-shadows" checked> Enable Shadows
-        </label>
-        <hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
-        <label>
-          <input type="checkbox" id="show-axis"> Show Axis
-        </label>
-        <label>
-          <input type="checkbox" id="show-poles"> Show Poles
-        </label>
-        <label>
-          <input type="checkbox" id="show-equator"> Show Equator
-        </label>
+        
+        <div class="settings-section">
+          <h4 class="settings-section-title">Visual</h4>
+          <label>
+            <input type="checkbox" id="show-asteroid-belt">
+            <span>Asteroid Belt</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-milkyway">
+            <span>Milky Way</span>
+          </label>
+          <label>
+            <input type="checkbox" id="enable-shadows" checked>
+            <span>Shadows</span>
+          </label>
+        </div>
+        
+        <div class="settings-section">
+          <h4 class="settings-section-title">Guides</h4>
+          <label>
+            <input type="checkbox" id="show-distance-labels">
+            <span>Distance Labels</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-coordinate-system">
+            <span>Coordinates</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-equinox-markers">
+            <span>Equinoxes</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-axis">
+            <span>Axis</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-poles">
+            <span>Poles</span>
+          </label>
+          <label>
+            <input type="checkbox" id="show-equator">
+            <span>Equator</span>
+          </label>
+        </div>
       </div>
     </div>
     

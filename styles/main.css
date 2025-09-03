@@ -85,8 +85,20 @@ body {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
+}
+
+#time-controls .time-controls-main {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  order: 1;
+}
+
+#time-controls #time-display {
+  order: 2;
 }
 
 #time-controls button {
@@ -142,6 +154,7 @@ body {
 #settings {
   top: 20px;
   right: 20px;
+  z-index: 100;
 }
 
 #settings-toggle {
@@ -164,6 +177,28 @@ body {
 
 #settings-content input[type="checkbox"] {
   margin-right: 8px;
+}
+
+/* Settings sections for better organization */
+.settings-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-section-title {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #0099ff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 #settings-content input[type="range"] {
@@ -370,8 +405,11 @@ body {
 }
 
 #about {
-  bottom: 20px;
-  left: 20px;
+  top: 20px;
+  right: 100px;
+  bottom: auto;
+  left: auto;
+  z-index: 90;
 }
 
 #about-toggle {
@@ -468,115 +506,425 @@ body {
   color: #0099ff;
 }
 
-/* Touch device styles */
+/* Mobile navigation hint */
+.mobile-only {
+  display: none;
+}
+
+#mobile-nav-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 500;
+  animation: fadeInOut 5s ease-out forwards;
+  pointer-events: none;
+}
+
+.touch-hint {
+  color: white;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Mobile-first responsive design */
+/* Base mobile styles */
+@media (max-width: 768px) {
+  /* Show mobile navigation hint on mobile devices */
+  .mobile-only {
+    display: block;
+  }
+  .panel {
+    padding: 10px;
+    backdrop-filter: blur(8px);
+    background: rgba(20, 20, 30, 0.95);
+  }
+  
+  /* Info panel - top left, more compact */
+  #info-panel {
+    top: 10px;
+    left: 10px;
+    right: auto;
+    max-width: calc(100vw - 80px);
+    overflow-y: auto;
+  }
+  
+  #info-panel h2 {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  
+  #info-panel #planet-info {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  
+  #info-reference {
+    display: none;
+  }
+  
+  /* Settings - convert to mobile drawer */
+  #settings {
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  
+  #settings-toggle {
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  
+  #settings-toggle:active {
+    transform: scale(0.95);
+    background: rgba(20, 20, 30, 1);
+  }
+  
+  #settings-content {
+    position: fixed;
+    top: 60px;
+    right: 10px;
+    left: auto;
+    width: min(320px, calc(100vw - 20px));
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    background: rgba(20, 20, 30, 0.98);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+  
+  #settings-content label {
+    display: flex;
+    align-items: center;
+    padding: 10px 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  #settings-content label:active {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  #settings-content label span {
+    flex: 1;
+    user-select: none;
+  }
+  
+  #settings-content input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    cursor: pointer;
+  }
+  
+  #settings-content select {
+    flex: 0 0 auto;
+    margin-left: 10px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 80px;
+  }
+  
+  .settings-section {
+    margin-bottom: 15px;
+  }
+  
+  .settings-section-title {
+    font-size: 12px;
+    margin: 10px 0 8px 0;
+    padding: 5px;
+    background: rgba(0, 153, 255, 0.1);
+    border-radius: 4px;
+  }
+  
+  /* Time controls - bottom bar layout */
+  #time-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    border-radius: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 10px;
+    background: rgba(20, 20, 30, 0.98);
+  }
+  
+  .time-controls-main {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  #time-controls button {
+    min-width: 44px;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    flex: 0 0 auto;
+  }
+  
+  #play-pause {
+    font-size: 18px;
+  }
+  
+  #time-speed {
+    flex: 1 1 auto;
+    min-width: 120px;
+    max-width: 200px;
+    min-height: 40px;
+    font-size: 14px;
+    padding: 8px;
+  }
+  
+  #reset-to-now {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  #time-display {
+    font-size: 15px;
+    text-align: center;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.95);
+    padding: 0 0 4px 0;
+    font-weight: 500;
+  }
+  
+  #current-date {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  #date-picker {
+    display: none; /* Hide on mobile */
+  }
+  
+  /* SpaceMouse status - hide on mobile */
+  #spacemouse-status {
+    display: none;
+  }
+  
+  /* About button - floating action button style */
+  #about {
+    position: fixed;
+    bottom: auto;
+    left: auto;
+    top: 10px;
+    right: 60px;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  
+  #about-toggle {
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  
+  #about-toggle:active {
+    transform: scale(0.95);
+    background: rgba(20, 20, 30, 1);
+  }
+  
+  /* Planet labels optimization */
+  .planet-label {
+    font-size: 11px;
+    padding: 6px 10px;
+    min-height: 28px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  #info-panel {
+    font-size: 11px;
+  }
+  
+  #info-panel h2 {
+    font-size: 14px;
+  }
+  
+  #time-controls {
+    padding: 8px;
+    gap: 6px;
+  }
+  
+  #time-controls button {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 6px 10px;
+    font-size: 16px;
+  }
+  
+  #time-speed {
+    min-width: 120px;
+    font-size: 12px;
+  }
+  
+  #reset-to-now {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+/* Landscape orientation for mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  #info-panel {
+    max-width: 280px;
+  }
+  
+  #time-controls {
+    padding: 8px 10px;
+    flex-direction: row;
+    justify-content: center;
+  }
+  
+  #time-controls .time-controls-main {
+    flex: 1;
+    max-width: 500px;
+  }
+  
+  #time-display {
+    flex: 0 0 auto;
+    min-width: 120px;
+    font-size: 13px;
+    padding: 0 0 0 10px;
+  }
+  
+  #time-speed {
+    max-width: 180px;
+  }
+  
+  /* Reduce heights in landscape */
+  #time-controls button,
+  #time-speed,
+  #reset-to-now {
+    min-height: 36px;
+    max-height: 36px;
+  }
+  
+  #settings-content {
+    max-height: calc(100vh - 80px);
+    top: 50px;
+  }
+}
+
+/* Very small screens in landscape */
+@media (max-height: 400px) {
+  #info-panel {
+    display: none; /* Hide info panel on very small landscape screens */
+  }
+  
+  #settings-content {
+    max-height: calc(100vh - 60px);
+    top: 50px;
+  }
+  
+  #time-controls {
+    padding: 5px;
+  }
+  
+  #time-controls button,
+  #time-speed,
+  #reset-to-now {
+    min-height: 32px;
+    max-height: 32px;
+    font-size: 12px;
+  }
+}
+
+/* Touch-optimized styles */
 @media (pointer: coarse) {
   .panel {
-    padding: 12px;
-    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
   
   button {
     min-height: 44px;
     min-width: 44px;
-    padding: 8px 16px;
-    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.2s ease;
   }
   
-  #time-controls button {
+  button:active {
+    transform: scale(0.95);
+  }
+  
+  /* Better touch targets for inputs */
+  input[type="checkbox"] {
+    min-width: 24px;
+    min-height: 24px;
+    cursor: pointer;
+  }
+  
+  input[type="range"] {
     min-height: 44px;
-    padding: 10px 16px;
-    font-size: 18px;
   }
   
-  #time-speed {
+  select {
     min-height: 44px;
-    font-size: 16px;
-    padding: 8px;
+    cursor: pointer;
   }
   
+  /* Planet labels with better touch targets */
   .planet-label {
+    min-height: 36px;
     padding: 8px 12px;
-    font-size: 14px;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
+    cursor: pointer;
   }
   
-  #settings-content label {
-    margin: 12px 0;
-    font-size: 16px;
-  }
-  
-  #settings-content input[type="checkbox"] {
-    transform: scale(1.2);
-    margin-right: 12px;
-  }
-}
-
-@media (max-width: 768px) {
-  .panel {
-    padding: 10px;
-  }
-  
-  #info-panel {
-    max-width: 200px;
-  }
-  
-  #time-controls {
-    flex-direction: column;
-    gap: 8px;
-    padding: 15px;
-  }
-  
-  .spacemouse-settings {
-    width: calc(100vw - 40px);
-    max-width: 280px;
-    right: 20px;
-    left: auto;
-    bottom: 60px;
-    max-height: 50vh;
-  }
-  
-}
-
-/* Landscape phones and small tablets */
-@media (max-width: 768px) and (orientation: landscape) {
-  #info-panel {
-    top: 10px;
-    left: 10px;
-    max-width: 250px;
-  }
-  
-  #time-controls {
-    bottom: 10px;
-    flex-direction: row;
-    gap: 10px;
-  }
-  
-  #spacemouse-status {
-    bottom: 10px;
-    right: 10px;
-  }
-  
-  #about {
-    bottom: 10px;
-    left: 10px;
-  }
-}
-
-@media (max-height: 600px) {
-  .spacemouse-settings {
-    max-height: 40vh;
-    bottom: 50px;
-  }
-  
-  .panel {
-    padding: 8px;
-  }
-  
-  #time-controls {
-    bottom: 10px;
-    padding: 10px;
+  .planet-label:active {
+    transform: scale(0.98);
   }
 }
 
@@ -588,5 +936,143 @@ body {
   
   #canvas {
     touch-action: none;
+  }
+}
+
+/* iPad and tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #info-panel {
+    max-width: 320px;
+    font-size: 14px;
+  }
+  
+  /* Time controls - optimized for tablet */
+  #time-controls {
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 500px;
+    max-width: 700px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+  
+  #time-controls .time-controls-main {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex: 0 1 auto;
+    order: 1;
+  }
+  
+  #time-controls #time-display {
+    flex: 0 0 auto;
+    order: 2;
+    min-width: 160px;
+    font-size: 14px;
+    padding: 0;
+    text-align: right;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95);
+  }
+  
+  #time-controls button {
+    min-height: 42px;
+    padding: 10px 16px;
+    font-size: 15px;
+    border-radius: 8px;
+    flex: 0 0 auto;
+  }
+  
+  #play-pause {
+    font-size: 22px;
+    min-width: 56px;
+    min-height: 44px;
+  }
+  
+  #reset-to-now {
+    font-size: 16px;
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+  
+  #time-speed {
+    min-width: 170px;
+    max-width: 200px;
+    min-height: 42px;
+    font-size: 14px;
+    padding: 8px;
+    flex: 0 1 auto;
+  }
+  
+  #date-picker {
+    display: block;
+    min-height: 42px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 6px;
+    font-size: 14px;
+    flex: 0 0 auto;
+    min-width: 140px;
+  }
+  
+  #settings {
+    top: 20px;
+    right: 20px;
+  }
+  
+  #settings-toggle {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  #settings-content {
+    position: absolute;
+    top: 70px;
+    right: 0;
+    width: 340px;
+    font-size: 14px;
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+  
+  #about {
+    top: 20px;
+    right: 124px;  /* Proper spacing from settings button */
+    bottom: auto;
+    left: auto;
+  }
+  
+  #about-toggle {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Hide SpaceMouse status on tablets */
+  #spacemouse-status {
+    display: none;
   }
 }
