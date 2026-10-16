@@ -51,68 +51,20 @@ aws s3 sync $BUILD_DIR s3://$BUCKET_NAME \
     --exclude "*.html" \
     --exclude "*.json"
 
-# Upload HTML files with no-cache headers
+# Upload HTML and manifest/service worker files with no-cache
 aws s3 sync $BUILD_DIR s3://$BUCKET_NAME \
     --cache-control "no-cache, no-store, must-revalidate" \
-    --include "*.html"
-
-# Upload manifest/service worker files with no-cache
-aws s3 sync $BUILD_DIR s3://$BUCKET_NAME \
-    --cache-control "no-cache, no-store, must-revalidate" \
+    --exclude "*" \
+    --include "*.html" \
     --include "*.json"
 
-# Set website configuration (if not already set)
-echo "🌐 Configuring website settings..."
-aws s3 website s3://$BUCKET_NAME \
-    --index-document index.html \
-    --error-document index.html
-
-# Set bucket policy for public access
-echo "🔓 Setting bucket policy for public access..."
-cat > bucket-policy.json << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "PublicReadGetObject",
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::$BUCKET_NAME/*"
-        }
-    ]
-}
-EOF
-
-aws s3api put-bucket-policy --bucket $BUCKET_NAME --policy file://bucket-policy.json
-rm bucket-policy.json
-echo "✅ Bucket policy set successfully"
-
-# Get the website URL
-WEBSITE_URL="http://$BUCKET_NAME.s3-website-$(aws configure get region).amazonaws.com"
-
-# Invalidate CloudFront cache if distribution ID is set
-if [ ! -z "$DISTRIBUTION_ID" ]; then
-    echo "🔄 Invalidating CloudFront cache..."
-    aws cloudfront create-invalidation \
-        --distribution-id $DISTRIBUTION_ID \
-        --paths "/*" > /dev/null
-    echo "✅ CloudFront cache invalidated"
-fi
+# The bucket is private and served only through CloudFront. Bucket, policy and
+# distribution are managed in github.com/leinonen/infrastructure (stacks/websites).
+echo "🔄 Invalidating CloudFront cache..."
+aws cloudfront create-invalidation \
+    --distribution-id $DISTRIBUTION_ID \
+    --paths "/*" > /dev/null
+echo "✅ CloudFront cache invalidated"
 
 echo "✅ Deployment completed successfully!"
-echo "🌍 Website URL: $WEBSITE_URL"
-echo "🌍 Custom domain: https://$BUCKET_NAME (if DNS is configured)"
-if [ ! -z "$DISTRIBUTION_ID" ]; then
-    echo "☁️  CloudFront: https://$BUCKET_NAME"
-fi
-echo ""
-echo "📊 Deployment summary:"
-echo "   - Built application with Vite"
-echo "   - Uploaded all assets to S3"
-echo "   - Configured static website hosting"
-echo "   - Set appropriate cache headers"
-echo "   - Enabled public access"
-if [ ! -z "$DISTRIBUTION_ID" ]; then
-    echo "   - Invalidated CloudFront cache"
-fi
+echo "🌍 https://$BUCKET_NAME"
